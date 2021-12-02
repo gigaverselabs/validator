@@ -1,9 +1,9 @@
 // GET YOUR INFURA API ENDPOINT FROM https://infura.io/
 module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
-module.exports.ADDRESS = "0xcCD3C6E5421aCaCb84272A3c02DCCdD727908B4B"
+module.exports.ADDRESS = "0x0D856898AFf4A4CdA06c0eb3EC67aE1E79918F08"
 
-module.exports.privateKey = "acc68d51628ccfb449d5cb64b3d5bccf468da57f3695bddf8812f963684437ee";
-module.exports.publicAddress = "0xbaaE4d0393B48deFaF34552458c74164E5dd4005";
+// module.exports.privateKey = "6dca8f5a19fdf14e6caa2ed628cb75c587a9499066399ec4ffde2f99375ce511";
+// module.exports.publicAddress = "0xE391A6A1962eb754a2e5176dEEa277E68e4D2Bd1";
 
 // Mumbai testnet
 // module.exports.ENDPOINT = "https://matic-mumbai.chainstacklabs.com"
@@ -14,6 +14,11 @@ module.exports.publicAddress = "0xbaaE4d0393B48deFaF34552458c74164E5dd4005";
 // module.exports.ADDRESS = "0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77";
 
 module.exports.ABI = [
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
   {
     "anonymous": false,
     "inputs": [
@@ -55,6 +60,12 @@ module.exports.ABI = [
         "type": "address"
       },
       {
+        "indexed": false,
+        "internalType": "string",
+        "name": "_sidechainOwner",
+        "type": "string"
+      },
+      {
         "indexed": true,
         "internalType": "address",
         "name": "_tokenAddress",
@@ -62,15 +73,9 @@ module.exports.ABI = [
       },
       {
         "indexed": false,
-        "internalType": "address",
+        "internalType": "string",
         "name": "_sidechainAddress",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint32",
-        "name": "_standard",
-        "type": "uint32"
+        "type": "string"
       },
       {
         "indexed": false,
@@ -144,9 +149,9 @@ module.exports.ABI = [
     "name": "deposits",
     "outputs": [
       {
-        "internalType": "address",
+        "internalType": "string",
         "name": "owner",
-        "type": "address"
+        "type": "string"
       },
       {
         "internalType": "address",
@@ -154,14 +159,9 @@ module.exports.ABI = [
         "type": "address"
       },
       {
-        "internalType": "address",
+        "internalType": "string",
         "name": "sidechainAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint32",
-        "name": "standard",
-        "type": "uint32"
+        "type": "string"
       },
       {
         "internalType": "uint256",
@@ -172,6 +172,64 @@ module.exports.ABI = [
     "stateMutability": "view",
     "type": "function",
     "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      }
+    ],
+    "name": "getMappedToken",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "_sidechainToken",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "mainchainMap",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "mainchainToken",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "sidechainToken",
+        "type": "string"
+      }
+    ],
+    "name": "mapToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "inputs": [],
@@ -282,9 +340,9 @@ module.exports.ABI = [
   {
     "inputs": [
       {
-        "internalType": "address",
+        "internalType": "string",
         "name": "_user",
-        "type": "address"
+        "type": "string"
       },
       {
         "internalType": "address",
