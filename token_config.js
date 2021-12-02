@@ -1,6 +1,6 @@
 // GET YOUR INFURA API ENDPOINT FROM https://infura.io/
 module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
-module.exports.ADDRESS = "0xa4DEcbA07387356de0b2b6D05480FB57998a79aD"
+module.exports.ADDRESS = "0x842544BA07e36D7d917bD8Aa6F37f4935f232240"
 
 // Mumbai testnet
 // module.exports.ENDPOINT = "https://matic-mumbai.chainstacklabs.com"
