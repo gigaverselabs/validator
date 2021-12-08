@@ -1,10 +1,10 @@
 // GET YOUR INFURA API ENDPOINT FROM https://infura.io/
-module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
-module.exports.ADDRESS = "0x842544BA07e36D7d917bD8Aa6F37f4935f232240"
+// module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
+// module.exports.ADDRESS = "0xec75F720D77147744c5f831E391bB9B42D6C3a4A"
 
 // Mumbai testnet
-// module.exports.ENDPOINT = "https://matic-mumbai.chainstacklabs.com"
-// module.exports.ADDRESS = "0x1b62e43819bb111C2F9aBb98a7a55aeE4E8C8C26"
+module.exports.ENDPOINT = "https://ropsten.infura.io/v3/c8f0b10f0c7d4bffb5955985211dbfa6"
+module.exports.ADDRESS = "0x176d214F3729054C9c361C06C5aAee6C53276FFe"
 
 //Polygon mainnet
 // module.exports.ENDPOINT = "https://polygon-rpc.com";
@@ -403,6 +403,51 @@ module.exports.ABI = [
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "tokenByIndex",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "tokenOfOwnerByIndex",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
       }
@@ -413,6 +458,20 @@ module.exports.ABI = [
         "internalType": "string",
         "name": "",
         "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -483,13 +542,7 @@ module.exports.ABI = [
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_tokenId",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [],
     "name": "mint",
     "outputs": [],
     "stateMutability": "nonpayable",
