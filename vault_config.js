@@ -1,13 +1,10 @@
 // GET YOUR INFURA API ENDPOINT FROM https://infura.io/
-module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
-module.exports.ADDRESS = "0x0D856898AFf4A4CdA06c0eb3EC67aE1E79918F08"
-
-// module.exports.privateKey = "6dca8f5a19fdf14e6caa2ed628cb75c587a9499066399ec4ffde2f99375ce511";
-// module.exports.publicAddress = "0xE391A6A1962eb754a2e5176dEEa277E68e4D2Bd1";
+// module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
+// module.exports.ADDRESS = "0x491b66128F01EF4A1b13995Dc07Dbf95b50A00ae"
 
 // Mumbai testnet
-// module.exports.ENDPOINT = "https://matic-mumbai.chainstacklabs.com"
-// module.exports.ADDRESS = "0x1b62e43819bb111C2F9aBb98a7a55aeE4E8C8C26"
+module.exports.ENDPOINT = "https://ropsten.infura.io/v3/c8f0b10f0c7d4bffb5955985211dbfa6"
+module.exports.ADDRESS = "0xE84F285477C780e7EA89dd803e49069C1Ec72da9"
 
 //Polygon mainnet
 // module.exports.ENDPOINT = "https://polygon-rpc.com";

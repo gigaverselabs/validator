@@ -63,11 +63,11 @@ async function getMappedToken() {
 
 async function execute() {
     let tokenId = 1;
-    await getToken(tokenId);
-    await approveVault();
+    // await getToken(tokenId);
+    // await approveVault();
     await addMappedToken();
     await getMappedToken();
-    await sendToVault(tokenId);
+    // await sendToVault(tokenId);
 }
 
 execute();
