@@ -13,6 +13,28 @@ import sign_vault_config from '../signature_vault_config';
 import ic_vault_config from '../ic_vault_config';
 import ic_token_config from '../ic_token_config';
 
+import List from '@mui/material/List';
+import Card from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Checkbox from '@mui/material/Checkbox';
+import Divider from '@mui/material/Divider';
+import { Button, Container, Grid, Typography, ListItemButton, ListItemAvatar, Avatar, TextField, InputAdornment, LinearProgress, Box, Paper } from '@mui/material'
+
+function not(a, b) {
+  return a.filter((value) => b.indexOf(value) === -1);
+}
+
+function contains(arr, i) {
+  return arr.indexOf(i) !== -1;
+}
+
+function getShortPrincipal(p) {
+  return p.substring(0, 5)+'...'+p.substring(60);
+}
+
 export default function Home() {
 
   // FOR WALLET
@@ -36,7 +58,7 @@ export default function Home() {
   const [pendingTx, setPendingTx] = useState([]);
 
 
-  const NETWORK_ID = 3; //Ropsten
+  const NETWORK_ID = 137; //Polygon Matic
 
   useEffect(async () => {
     signIn()
@@ -60,7 +82,7 @@ export default function Home() {
         window.web3.eth.getChainId()
           .then((chainId) => {
             if (chainId != NETWORK_ID) {
-              alert("You are not on ropsten chain. Change network to ropsten in metamask or use button 'ROPSTEN'");
+              alert("You are not on polygon chain. Change network to polygon in metamask or use button 'POLYGON'");
             } else {
               setChainId(chainId);
               setWalletAddress(wallet);
@@ -77,10 +99,15 @@ export default function Home() {
   }
 
   async function switchNetwork() {
-    const chainId = '0x03'; // Ropsten
-    const rpc = 'https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
-    const chainName = 'Ropsten';
-    const block = 'https://ropsten.etherscan.io';
+    // const chainId = '0x03'; // Ropsten
+    // const rpc = 'https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
+    // const chainName = 'Ropsten';
+    // const block = 'https://ropsten.etherscan.io';
+
+    const chainId = '0x89'; // Polygon
+    const rpc = 'https://polygon-rpc.com';
+    const chainName = 'Polygon';
+    const block = 'https://polygonscan.com';
 
     // const chainId = '0x539'; //Ganache
     // const rpc = 'HTTP://127.0.0.1:7545';
@@ -133,6 +160,7 @@ export default function Home() {
     if (tokenContract === null) return;
     if (walletAddress === null) return;
 
+    try {
     const ownedTokens = await tokenContract.methods.balanceOf(walletAddress).call();
     console.log("Owned tokens: " + ownedTokens);
 
@@ -143,29 +171,29 @@ export default function Home() {
 
       tokens.push(token);
     }
-    setOwnedTokens(tokens);
+    setOwnedTokens(tokens); } catch (e) { console.error(e); }
   }
 
   useEffect(() => getOwnedTokens(), [tokenContract]);
 
-  async function claimToken() {
-    const gasAmount = await tokenContract.methods.mint().estimateGas({ from: walletAddress, value: 0 })
+  // async function claimToken() {
+  //   const gasAmount = await tokenContract.methods.mint().estimateGas({ from: walletAddress, value: 0 })
 
-    console.log("estimated gas", gasAmount)
+  //   console.log("estimated gas", gasAmount)
 
-    tokenContract.methods
-      .mint()
-      .send({ from: walletAddress, value: 0, gas: String(gasAmount) })
-      .on('transactionHash', function (hash) {
-        console.log("transactionHash", hash)
-        getOwnedTokens();
-      })
-      .on('confirmation', function (no) {
-        if (no == 2) {
-          getOwnedTokens();
-        }
-      })
-  }
+  //   tokenContract.methods
+  //     .mint()
+  //     .send({ from: walletAddress, value: 0, gas: String(gasAmount) })
+  //     .on('transactionHash', function (hash) {
+  //       console.log("transactionHash", hash)
+  //       getOwnedTokens();
+  //     })
+  //     .on('confirmation', function (no) {
+  //       if (no == 2) {
+  //         getOwnedTokens();
+  //       }
+  //     })
+  // }
 
   async function plugConnect() {
     // Canister Ids
@@ -247,19 +275,25 @@ export default function Home() {
     const timer2 = setInterval(() => {
       getPendingTx();
       getIcTokens();
+      getOwnedTokens();
     }, 5000);
     return () => clearTimeout(timer2);
   }, [signVault]);
-  
+
   async function bridgeToken() {
     if (ownedTokens.length === 0) return;
+    if (selectedIndex === null) return;
 
+    //Check if VAULT is approved for token storage
     let approved = await tokenContract.methods.isApprovedForAll(walletAddress, vault_config.ADDRESS)
       .call();
 
     if (!approved) {
       //Allow vault contract to store NFT from EVM
-      let gasAmount = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).estimateGas({ from: walletAddress, value: 0 })
+      let gasAmount = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).estimateGas({ from: walletAddress })
+
+      debugger;
+
       let result = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).send({
         from: walletAddress,
         gas: gasAmount
@@ -267,8 +301,8 @@ export default function Home() {
 
       console.log(result);
     }
-    //
-    let tokenId = ownedTokens[0];
+    
+    let tokenId = Number(selectedIndex)
 
     let gasAmount = await vaultContract.methods.depositERC721For(
       principalId.toString(),
@@ -276,13 +310,20 @@ export default function Home() {
       tokenId
     ).estimateGas({ from: walletAddress, value: 0 })
 
+    debugger;
+
+    let token_address = token_config.ADDRESS
+    let prin_str = principalId.toString();
+
+    debugger;
+
     let result = await vaultContract.methods.depositERC721For(
-      principalId.toString(),
-      token_config.ADDRESS,
+      prin_str,
+      token_address,
       tokenId
     ).send({
       from: walletAddress,
-      gas: gasAmount
+      // gas: gasAmount
     });
 
     console.log(result);
@@ -321,13 +362,158 @@ export default function Home() {
     setIcOwnedTokens(result);
   }
 
+  // const handleToggle = (value) => () => {
+  //   const currentIndex = checked.indexOf(value);
+  //   const newChecked = [...checked];
+
+  //   if (currentIndex === -1) {
+  //     newChecked.push(value);
+  //   } else {
+  //     newChecked.splice(currentIndex, 1);
+  //   }
+
+  //   setChecked(newChecked);
+  // };
+
+  // const numberOfChecked = (items) => intersection(checked, items).length;
+
+  // const handleCheckedRight = () => {
+  //   setRight(right.concat(leftChecked));
+  //   setLeft(not(left, leftChecked));
+  //   setChecked(not(checked, leftChecked));
+  // };
+
+  // const handleCheckedLeft = () => {
+  //   setLeft(left.concat(rightChecked));
+  //   setRight(not(right, rightChecked));
+  //   setChecked(not(checked, rightChecked));
+  // };
+
+  // const [checked, setChecked] = React.useState([]);
+
+  const [direction, setDirection] = useState(null);
+
+  // const leftChecked = contains(ownedTokens, selectedIndex);
+  // const rightChecked = contains(icOwnedTokens, selectedIndex);
+
+  const [selectedIndex, setSelectedIndex] = React.useState(null);
+
+  const handleListItemClick = (event, index) => {
+    setSelectedIndex(index);
+    if (contains(ownedTokens, index)) setDirection(true);
+    if (contains(icOwnedTokens, index)) setDirection(false);
+  };
+
+  const customList = (title, items) => (
+    <Card>
+      <List
+        sx={{
+          bgcolor: 'background.paper',
+          overflow: 'auto',
+        }}
+        dense
+        component="div"
+        role="list"
+      >
+        {items.map((value) => {
+          const labelId = `transfer-list-all-item-${value}-label`;
+
+          return (
+            <ListItem
+              key={value}
+              role="listitem"
+              selected={selectedIndex === value}
+              button
+              onClick={(event) => handleListItemClick(event, value)}
+            >
+              <ListItemAvatar>
+                <Avatar
+                  alt={`Avatar n°${value}`}
+                  src={`https://cache.icpunks.com/flies/${value}`}
+                />
+              </ListItemAvatar>
+              <ListItemText id={labelId} primary={`Fly #${value}`} />
+              {/* <ListItemIcon>
+                <Checkbox
+                  checked={checked.indexOf(value) !== -1}
+                  tabIndex={-1}
+                  disableRipple
+                  inputProps={{
+                    'aria-labelledby': labelId,
+                  }}
+                />
+              </ListItemIcon> */}
+            </ListItem>
+          );
+        })}
+        <ListItem />
+      </List>
+    </Card>
+  );
+
+  return (<>
+    <Head>
+      <title>Giga Bridge</title>
+      <meta name="description" content="Generated by create next app" />
+      <link rel="icon" href="/favicon.ico" />
+    </Head>
+
+    <Box>
+      <Container maxWidth="xl">
+        <Grid container spacing={2} justifyContent="center" alignItems="flex-start" marginTop={10}>
+          <Grid item xs={5}>
+            <Typography variant="h4" textAlign={'center'} margin={'10px'}>
+              Polygon
+            </Typography>
+
+            {signedIn ? <Button variant="contained" size="large" onClick={signIn}>{walletAddress}</Button> :
+              <Button variant="contained" size="large" onClick={signIn}>METAMASK</Button>}
+
+            {customList('Choices', ownedTokens)}
+          </Grid>
+          <Grid item xs={2}>
+            <Grid container direction="column" alignItems="center" marginTop={20}>
+              <Button
+                sx={{ my: 0.5 }}
+                variant="outlined"
+                size="small"
+                // onClick={handleCheckedRight}
+                disabled={direction !== true}
+                aria-label="move selected right"
+                onClick={bridgeToken}
+              >
+                EVM &gt; IC
+              </Button>
+              <Button
+                sx={{ my: 0.5 }}
+                variant="outlined"
+                size="small"
+                // onClick={handleCheckedLeft}
+                disabled={direction !== false}
+                aria-label="move selected left"
+              >
+                IC &lt; EVM
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid item xs={5}>
+            <Typography variant="h4" textAlign={'center'} margin={'10px'}>
+              Internet Computer
+            </Typography>
+            {principalId !== null ? <Button variant="contained" size="large" onClick={plugConnect}>{getShortPrincipal(principalId.toString())}</Button> :
+              <Button variant="contained" size="large" onClick={plugConnect}>PLUG</Button>}
+            {customList('Chosen', icOwnedTokens)}
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+
+  </>
+  );
+
   return (
     <div className={styles.container}>
-      <Head>
-        <title>Giga Bridge</title>
-        <meta name="description" content="Generated by create next app" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+
 
       <main className={styles.main}>
         <h1 className={styles.title}>
@@ -377,13 +563,13 @@ export default function Home() {
           pendingTx.length === 0 ?
 
             (ownedTokens.length === 0 ?
-            <p className={styles.description}>
-            Step 4: No tokens to send
-          </p>
-            :
-            <p className={styles.description}>
-              Step 4: Send NFT to BRIDGE! <button onClick={bridgeToken}>Brige!</button>
-            </p>)
+              <p className={styles.description}>
+                Step 4: No tokens to send
+              </p>
+              :
+              <p className={styles.description}>
+                Step 4: Send NFT to BRIDGE! <button onClick={bridgeToken}>Brige!</button>
+              </p>)
             :
             <p className={styles.description}>
               Step 4: Complete! Pending withdrawals: {pendingTx.length}
