@@ -3,12 +3,13 @@
 // module.exports.ADDRESS = "0x491b66128F01EF4A1b13995Dc07Dbf95b50A00ae"
 
 // Mumbai testnet
-module.exports.ENDPOINT = "https://ropsten.infura.io/v3/c8f0b10f0c7d4bffb5955985211dbfa6"
-module.exports.ADDRESS = "0xE84F285477C780e7EA89dd803e49069C1Ec72da9"
+// module.exports.ENDPOINT = "https://ropsten.infura.io/v3/c8f0b10f0c7d4bffb5955985211dbfa6"
+// module.exports.ADDRESS = "0xE84F285477C780e7EA89dd803e49069C1Ec72da9"
 
 //Polygon mainnet
 // module.exports.ENDPOINT = "https://polygon-rpc.com";
-// module.exports.ADDRESS = "0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77";
+module.exports.ENDPOINT = "https://rpc-mainnet.matic.network";
+module.exports.ADDRESS = "0x05ADe2AfAF57E1510C16B93e2760EA336b28E9fd";
 
 module.exports.ABI = [
   {
