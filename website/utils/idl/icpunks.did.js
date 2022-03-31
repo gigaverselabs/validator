@@ -110,6 +110,7 @@ export default ({ IDL }) => {
     'list' : IDL.Func([IDL.Nat, IDL.Nat64], [IDL.Bool], []),
     'mint' : IDL.Func([MintRequest], [IDL.Nat], []),
     'multi_mint' : IDL.Func([IDL.Vec(MintRequest)], [IDL.Vec(IDL.Nat)], []),
+    'burn' : IDL.Func([IDL.Nat], [Result], []),
     'name' : IDL.Func([], [IDL.Text], ['query']),
     'owner' : IDL.Func([], [IDL.Principal], ['query']),
     'owner_of' : IDL.Func([IDL.Nat], [IDL.Principal], ['query']),

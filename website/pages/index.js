@@ -1,38 +1,30 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
-
 import React from "react";
 import Web3 from "web3";
 import { useState, useEffect } from 'react';
 
-import token_config from '../token_config';
-import vault_config from '../vault_config';
+import config from '../../config';
 
-import sign_vault_config from '../signature_vault_config';
-import ic_vault_config from '../ic_vault_config';
-import ic_token_config from '../ic_token_config';
+import evm_token from '../../defs/erc721';
+import evm_vault from '../../defs/evm_vault';
+
+import sign_vault_idl from '../../defs/signature_vault';
+import ic_vault_idl from '../../defs/ic_vault';
+import ic_token_idl from '../../defs/giga721';
 
 import List from '@mui/material/List';
 import Card from '@mui/material/Card';
-import CardHeader from '@mui/material/CardHeader';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Checkbox from '@mui/material/Checkbox';
-import Divider from '@mui/material/Divider';
 import { Button, Container, Grid, Typography, ListItemButton, ListItemAvatar, Avatar, TextField, InputAdornment, LinearProgress, Box, Paper } from '@mui/material'
+import toast from 'react-hot-toast';
 
-function not(a, b) {
-  return a.filter((value) => b.indexOf(value) === -1);
-}
 
 function contains(arr, i) {
   return arr.indexOf(i) !== -1;
 }
 
 function getShortPrincipal(p) {
-  return p.substring(0, 5)+'...'+p.substring(60);
+  return p.substring(0, 5) + '...' + p.substring(60);
 }
 
 export default function Home() {
@@ -55,8 +47,16 @@ export default function Home() {
   // INFO FROM SMART Contract
   const [ownedTokens, setOwnedTokens] = useState([]);
   const [icOwnedTokens, setIcOwnedTokens] = useState([]);
-  const [pendingTx, setPendingTx] = useState([]);
 
+  const [pendingTx, setPendingTx] = useState([]);
+  const [pendingIds, setPendingIds] = useState([]);
+  const [returningIds, setReturningIds] = useState([]);
+
+
+  const [isWorking, setIsWorking] = useState(false);
+
+  const web3 = new Web3(config.EVM_ENDPOINT);
+  const tokenReadonlyContract = new web3.eth.Contract(evm_token.ABI, config.EVM_TOKEN_ADDRESS)
 
   const NETWORK_ID = 137; //Polygon Matic
 
@@ -88,7 +88,7 @@ export default function Home() {
               setWalletAddress(wallet);
               setSignedIn(true);
 
-              callContractData(wallet);
+              getEvmContracts(wallet);
             }
           });
       })
@@ -147,12 +147,12 @@ export default function Home() {
     }
   }
 
-  async function callContractData() {
+  async function getEvmContracts() {
 
-    const tokenContract = new window.web3.eth.Contract(token_config.ABI, token_config.ADDRESS)
+    const tokenContract = new window.web3.eth.Contract(evm_token.ABI, config.EVM_TOKEN_ADDRESS)
     setTokenContract(tokenContract)
 
-    const vaultContract = new window.web3.eth.Contract(vault_config.ABI, vault_config.ADDRESS);
+    const vaultContract = new window.web3.eth.Contract(evm_vault.ABI, config.EVM_VAULT_ADDRESS);
     setVaultContract(vaultContract);
   }
 
@@ -161,57 +161,34 @@ export default function Home() {
     if (walletAddress === null) return;
 
     try {
-    const ownedTokens = await tokenContract.methods.balanceOf(walletAddress).call();
-    console.log("Owned tokens: " + ownedTokens);
+      const ownedTokens = await tokenReadonlyContract.methods.balanceOf(walletAddress).call();
+      // console.log("Owned tokens: " + ownedTokens);
 
-    let tokens = [];
+      let tokens = [];
 
-    for (var i = 0; i < ownedTokens; i++) {
-      const token = await tokenContract.methods.tokenOfOwnerByIndex(walletAddress, i).call();
+      for (var i = 0; i < ownedTokens; i++) {
+        const token = await tokenReadonlyContract.methods.tokenOfOwnerByIndex(walletAddress, i).call();
 
-      tokens.push(token);
-    }
-    setOwnedTokens(tokens); } catch (e) { console.error(e); }
+        tokens.push(token);
+      }
+      setOwnedTokens(tokens);
+    } catch (e) { console.error(e); }
   }
 
   useEffect(() => getOwnedTokens(), [tokenContract]);
 
-  // async function claimToken() {
-  //   const gasAmount = await tokenContract.methods.mint().estimateGas({ from: walletAddress, value: 0 })
-
-  //   console.log("estimated gas", gasAmount)
-
-  //   tokenContract.methods
-  //     .mint()
-  //     .send({ from: walletAddress, value: 0, gas: String(gasAmount) })
-  //     .on('transactionHash', function (hash) {
-  //       console.log("transactionHash", hash)
-  //       getOwnedTokens();
-  //     })
-  //     .on('confirmation', function (no) {
-  //       if (no == 2) {
-  //         getOwnedTokens();
-  //       }
-  //     })
-  // }
-
   async function plugConnect() {
     // Canister Ids
-    // const nnsCanisterId = 'qoctq-giaaa-aaaaa-aaaea-cai'
 
     // Whitelist
     const whitelist = [
-      sign_vault_config.ADDRESS,
-      ic_vault_config.ADDRESS,
-      ic_token_config.ADDRESS
+      config.IC_SIG_CANISTER,
+      config.IC_VAULT_CANISTER,
+      config.IC_TOKEN_CANISTER
     ];
 
     // Host
-    const host = sign_vault_config.ENDPOINT;
-
-    // const result = await window.ic.plug.isConnected();
-
-    // if (!result) {
+    const host = config.IC_ENDPOINT;
 
     // Make the request
     const result = await window.ic.plug.requestConnect({
@@ -235,8 +212,8 @@ export default function Home() {
     // Create an actor to interact with the NNS Canister
     // we pass the NNS Canister id and the interface factory
     const sign_vault = await window.ic.plug.createActor({
-      canisterId: sign_vault_config.ADDRESS,
-      interfaceFactory: sign_vault_config.IDL,
+      canisterId: config.IC_SIG_CANISTER,
+      interfaceFactory: sign_vault_idl.IDL,
     });
 
     setSignVault(sign_vault);
@@ -245,8 +222,8 @@ export default function Home() {
     // Create an actor to interact with the NNS Canister
     // we pass the NNS Canister id and the interface factory
     const ic_vault = await window.ic.plug.createActor({
-      canisterId: ic_vault_config.ADDRESS,
-      interfaceFactory: ic_vault_config.IDL,
+      canisterId: config.IC_VAULT_CANISTER,
+      interfaceFactory: ic_vault_idl.IDL,
     });
 
     setIcVault(ic_vault);
@@ -254,8 +231,8 @@ export default function Home() {
     // Create an actor to interact with the NNS Canister
     // we pass the NNS Canister id and the interface factory
     const ic_token = await window.ic.plug.createActor({
-      canisterId: ic_token_config.ADDRESS,
-      interfaceFactory: ic_token_config.IDL,
+      canisterId: config.IC_TOKEN_CANISTER,
+      interfaceFactory: ic_token_idl.IDL,
     });
 
     setIcToken(ic_token);
@@ -264,9 +241,62 @@ export default function Home() {
   async function getPendingTx() {
     if (signVault === null) return;
     const pending_tx = await signVault.get_pending_tx(principalId);
-    console.log("Pending Signature count: " + pending_tx.length);
+    // console.log("Pending Signature count: " + pending_tx.length);
+
+    const pendingIds = pending_tx.filter((x) => x.direction.incoming !== undefined).map((x) => x.tokenId);
+    const returningIds = pending_tx.filter((x) => x.direction.outgoing !== undefined).map((x) => x.tokenId);
+
     setPendingTx(pending_tx);
+
+    setPendingIds(pendingIds);
+    setReturningIds(returningIds);
+    // await withdrawTokens(pending_tx);
   }
+
+  async function withdrawTokens() {
+    if (icVault === null) return;
+    if (isWorking) return;
+
+    setIsWorking(true);
+
+    try {
+      for (var i = 0; i < pendingTx.length; i++) {
+        let tx = pendingTx[i];
+
+        let token = tx.token;
+        let token_id = tx.tokenId;
+        let signature = tx.signature;
+
+        console.log("Withdrawing token: " + token.toString());
+
+        if (tx.direction.incoming !== undefined) {
+          let result = await icVault.withdraw_nft(token.toString(), token_id, signature);
+          console.log(result);
+
+          let result2 = await signVault.tx_complete(tx.tx);
+          console.log(result2);
+        }
+
+        if (tx.direction.outgoing !== undefined) {
+          // let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
+          // console.log(result);
+
+          let result2 = await signVault.tx_complete(tx.tx);
+          console.log(result2);
+        }
+      }
+
+      getIcTokens();
+    } catch (e) {
+      console.error(e);
+    }
+
+    setIsWorking(false);
+  }
+
+  useEffect(() => {
+    withdrawTokens();
+  }, [icVault, signVault, pendingTx])
 
   //Check for pending transactions in ic_vault every 5 seconds 
   useEffect(() => {
@@ -292,16 +322,17 @@ export default function Home() {
       //Allow vault contract to store NFT from EVM
       let gasAmount = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).estimateGas({ from: walletAddress })
 
-      debugger;
+      let baseFee = block.baseFeePerGas * 100000000;
+
+      console.log(block.baseFeePerGas);
 
       let result = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).send({
-        from: walletAddress,
-        gas: gasAmount
+        from: walletAddress
       });
 
       console.log(result);
     }
-    
+
     let tokenId = Number(selectedIndex)
 
     let gasAmount = await vaultContract.methods.depositERC721For(
@@ -310,12 +341,8 @@ export default function Home() {
       tokenId
     ).estimateGas({ from: walletAddress, value: 0 })
 
-    debugger;
-
     let token_address = token_config.ADDRESS
     let prin_str = principalId.toString();
-
-    debugger;
 
     let result = await vaultContract.methods.depositERC721For(
       prin_str,
@@ -323,7 +350,6 @@ export default function Home() {
       tokenId
     ).send({
       from: walletAddress,
-      // gas: gasAmount
     });
 
     console.log(result);
@@ -331,22 +357,84 @@ export default function Home() {
     getPendingTx();
   }
 
-  async function withdrawTokens() {
-    for (var i = 0; i < pendingTx.length; i++) {
-      let tx = pendingTx[i];
+  async function returnToken() {
+    if (icToken === null) return;
+    if (icOwnedTokens.length === 0) return;
+    if (selectedIndex === null) return;
 
-      let token = tx.token;
-      let token_id = tx.tokenId;
-      let signature = tx.signature;
+    console.log("Burning token: " + selectedIndex);
 
-      let result = await icVault.withdraw_nft(token.toString(), token_id, signature);
-      console.log(result);
+    try {
+      let send_promise = icToken.burn(selectedIndex);
 
-      let result2 = await signVault.tx_complete(tx.tx);
-      console.log(result2);
+      toast.promise(
+        send_promise,
+        {
+          loading: 'Withdrawing from IC ...',
+          success: <b>Withdrawal complete!</b>,
+          error: <b>Withdrawal error!</b>,
+        }
+      );
+
+      let result = await send_promise;
+
+      console.log("Burn result: " + result);
+
+    } catch (e) {
+      console.error(e);
     }
+  }
 
-    getIcTokens();
+  // async function ensureApproved() {
+  //   //Check if VAULT is approved for token storage
+  //   let approved = await tokenContract.methods.isApprovedForAll(walletAddress, config.EVM_TOKEN_ADDRESS)
+  //     .call();
+
+  //   if (!approved) {
+  //     //Allow vault contract to store NFT from EVM
+  //     let gasAmount = await tokenContract.methods.setApprovalForAll(config.EVM_VAULT_ADDRESS, true).estimateGas({ from: walletAddress })
+
+  //     let baseFee = block.baseFeePerGas * 100000000;
+
+  //     console.log(block.baseFeePerGas);
+
+  //     let result = await tokenContract.methods.setApprovalForAll(config.EVM_VAULT_ADDRESS, true).send({
+  //       from: walletAddress
+  //     });
+
+  //     console.log(result);
+  //   }
+  // }
+
+  async function withdrawFromEth(tokenId, signature, block) {
+    // await ensureApproved();
+
+    let sig = Web3.utils.bytesToHex(signature);
+
+    let gasAmount = await vaultContract.methods.withdrawERC721For(
+      block,
+      walletAddress,
+      config.EVM_TOKEN_ADDRESS,
+      tokenId,
+      sig
+    ).estimateGas({ from: walletAddress, value: 0 })
+
+    console.log('Estimated gas: ' + gasAmount);
+
+    let result = await vaultContract.methods.withdrawERC721For(
+      block,
+      walletAddress,
+      config.EVM_TOKEN_ADDRESS,
+      tokenId,
+      sig
+    ).send({
+      from: walletAddress,
+    });
+
+    console.log(result);
+
+    getOwnedTokens();
+    getPendingTx();
   }
 
   useEffect(() => {
@@ -358,44 +446,12 @@ export default function Home() {
 
     let result = await icToken.user_tokens(principalId);
 
-    console.log("IC Tokens: " + result.length);
     setIcOwnedTokens(result);
   }
 
-  // const handleToggle = (value) => () => {
-  //   const currentIndex = checked.indexOf(value);
-  //   const newChecked = [...checked];
-
-  //   if (currentIndex === -1) {
-  //     newChecked.push(value);
-  //   } else {
-  //     newChecked.splice(currentIndex, 1);
-  //   }
-
-  //   setChecked(newChecked);
-  // };
-
-  // const numberOfChecked = (items) => intersection(checked, items).length;
-
-  // const handleCheckedRight = () => {
-  //   setRight(right.concat(leftChecked));
-  //   setLeft(not(left, leftChecked));
-  //   setChecked(not(checked, leftChecked));
-  // };
-
-  // const handleCheckedLeft = () => {
-  //   setLeft(left.concat(rightChecked));
-  //   setRight(not(right, rightChecked));
-  //   setChecked(not(checked, rightChecked));
-  // };
-
-  // const [checked, setChecked] = React.useState([]);
-
   const [direction, setDirection] = useState(null);
 
-  // const leftChecked = contains(ownedTokens, selectedIndex);
-  // const rightChecked = contains(icOwnedTokens, selectedIndex);
-
+ 
   const [selectedIndex, setSelectedIndex] = React.useState(null);
 
   const handleListItemClick = (event, index) => {
@@ -433,16 +489,6 @@ export default function Home() {
                 />
               </ListItemAvatar>
               <ListItemText id={labelId} primary={`Fly #${value}`} />
-              {/* <ListItemIcon>
-                <Checkbox
-                  checked={checked.indexOf(value) !== -1}
-                  tabIndex={-1}
-                  disableRipple
-                  inputProps={{
-                    'aria-labelledby': labelId,
-                  }}
-                />
-              </ListItemIcon> */}
             </ListItem>
           );
         })}
@@ -452,12 +498,6 @@ export default function Home() {
   );
 
   return (<>
-    <Head>
-      <title>Giga Bridge</title>
-      <meta name="description" content="Generated by create next app" />
-      <link rel="icon" href="/favicon.ico" />
-    </Head>
-
     <Box>
       <Container maxWidth="xl">
         <Grid container spacing={2} justifyContent="center" alignItems="flex-start" marginTop={10}>
@@ -477,23 +517,23 @@ export default function Home() {
                 sx={{ my: 0.5 }}
                 variant="outlined"
                 size="small"
-                // onClick={handleCheckedRight}
                 disabled={direction !== true}
                 aria-label="move selected right"
                 onClick={bridgeToken}
               >
-                EVM &gt; IC
+                POLYGON -&gt; IC
               </Button>
               <Button
                 sx={{ my: 0.5 }}
                 variant="outlined"
                 size="small"
-                // onClick={handleCheckedLeft}
                 disabled={direction !== false}
                 aria-label="move selected left"
+                onClick={returnToken}
               >
-                IC &lt; EVM
+                IC &lt;- POLYGON
               </Button>
+
             </Grid>
           </Grid>
           <Grid item xs={5}>
@@ -504,98 +544,25 @@ export default function Home() {
               <Button variant="contained" size="large" onClick={plugConnect}>PLUG</Button>}
             {customList('Chosen', icOwnedTokens)}
           </Grid>
+
+
+          <Grid item xs={5}>
+            <Typography variant="h4" textAlign={'center'} margin={'10px'}>
+              Polygon -&gt; IC
+            </Typography>
+            {customList('Chosen', pendingIds)}
+          </Grid>
+
+          <Grid item xs={5}>
+            <Typography variant="h4" textAlign={'center'} margin={'10px'}>
+              IC -&gt; Polygon
+            </Typography>
+            {customList('Chosen', returningIds)}
+          </Grid>
+
         </Grid>
       </Container>
     </Box>
-
   </>
   );
-
-  return (
-    <div className={styles.container}>
-
-
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to Giga Bridge!
-        </h1>
-
-        {
-          !signedIn ?
-            <p className={styles.description}>
-              Step 1: Connect Metamask <button onClick={signIn}>Connect</button>
-            </p> :
-            chainId === null ?
-              <p className={styles.description}>
-                Step 1: Switch to Ropsten Network
-                <button onClick={switchNetwork}>ROPSTEN</button>
-              </p> :
-              <p className={styles.description}>
-                Step 1: Complete!
-                Wallet: {walletAddress}
-              </p>
-
-        }
-
-        {
-          ownedTokens == 0 ?
-            <p className={styles.description}>
-              Step 2: Claim Free Token on Ropsten <button onClick={claimToken}>Claim</button>
-            </p>
-            :
-            <p className={styles.description}>
-              Step 2: Complete! Your tokens: [{ownedTokens}]
-            </p>
-        }
-
-        {
-          principalId === null ?
-            <p className={styles.description}>
-              Step 3: Connect to plug wallet! <button onClick={plugConnect}>Connect!</button>
-            </p>
-            :
-            <p className={styles.description}>
-              Step 3: Complete! Princial: {principalId.toString()}
-            </p>
-        }
-
-        {
-          pendingTx.length === 0 ?
-
-            (ownedTokens.length === 0 ?
-              <p className={styles.description}>
-                Step 4: No tokens to send
-              </p>
-              :
-              <p className={styles.description}>
-                Step 4: Send NFT to BRIDGE! <button onClick={bridgeToken}>Brige!</button>
-              </p>)
-            :
-            <p className={styles.description}>
-              Step 4: Complete! Pending withdrawals: {pendingTx.length}
-            </p>
-        }
-
-        {pendingTx.length === 0 ?
-          <p className={styles.description}>
-            Step 5: Wait for Validator!
-          </p>
-          :
-          <p className={styles.description}>
-            Step 5: Withdraw your NFT on IC! <button onClick={withdrawTokens}>Withdraw</button>
-          </p>
-        }
-
-        {
-          icOwnedTokens.length === 0 ?
-            <p className={styles.description}>
-              Step 6: Claim your tokens on IC
-            </p> :
-            <p className={styles.description}>
-              Step 6: Success! Your tokens: [{icOwnedTokens.join()}]
-            </p>
-        }
-      </main>
-    </div>
-  )
 }

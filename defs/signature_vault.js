@@ -1,22 +1,16 @@
-// Dev
-// module.exports.ENDPOINT = "http://127.0.0.1:8000"
-// module.exports.ADDRESS = "rkp4c-7iaaa-aaaaa-aaaca-cai"
-
-// Testnet
-module.exports.ENDPOINT = "https://mainnet.dfinity.network"
-module.exports.ADDRESS = "vdlpe-qyaaa-aaaah-qclcq-cai"
-
-// mainnet
-// module.exports.ENDPOINT = "https://polygon-rpc.com";
-// module.exports.ADDRESS = "0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77";
-
 module.exports.IDL = ({ IDL }) => {
+  const Direction = IDL.Variant({
+    'incoming' : IDL.Null,
+    'outgoing' : IDL.Null,
+  });
   const SignatureDesc = IDL.Record({
     'tx' : IDL.Text,
-    'token' : IDL.Principal,
+    'direction' : Direction,
+    'token' : IDL.Text,
     'signature' : IDL.Vec(IDL.Nat8),
     'tokenId' : IDL.Nat,
     'owner' : IDL.Principal,
+    'block' : IDL.Nat64,
   });
   const SignatureVault = IDL.Service({
     'getCycles' : IDL.Func([], [IDL.Nat], ['query']),
@@ -35,7 +29,15 @@ module.exports.IDL = ({ IDL }) => {
     'set_owner' : IDL.Func([IDL.Principal], [IDL.Bool], []),
     'signature_count' : IDL.Func([], [IDL.Nat], ['query']),
     'store_signature' : IDL.Func(
-        [IDL.Text, IDL.Principal, IDL.Principal, IDL.Nat, IDL.Vec(IDL.Nat8)],
+        [
+          IDL.Text,
+          IDL.Principal,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Vec(IDL.Nat8),
+          Direction,
+          IDL.Nat64,
+        ],
         [IDL.Bool],
         [],
       ),

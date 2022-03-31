@@ -1,12 +1,3 @@
-//Local Dev
-// module.exports.ADDRESS = "rrkah-fqaaa-aaaaa-aaaaq-cai"
-
-// Testnet
-module.exports.ADDRESS = "vrny5-4iaaa-aaaah-qclbq-cai"
-
-//Polygon mainnet
-// module.exports.ADDRESS = "vrny5-4iaaa-aaaah-qclbq-cai"
-
 module.exports.IDL = ({ IDL }) => {
   const Property = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const TokenDesc = IDL.Record({
