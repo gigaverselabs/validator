@@ -1,17 +1,3 @@
-// GET YOUR INFURA API ENDPOINT FROM https://infura.io/
-// module.exports.ENDPOINT = "HTTP://127.0.0.1:7545"
-// module.exports.ADDRESS = "0xec75F720D77147744c5f831E391bB9B42D6C3a4A"
-
-// Mumbai testnet
-// module.exports.ENDPOINT = "https://ropsten.infura.io/v3/c8f0b10f0c7d4bffb5955985211dbfa6"
-// module.exports.ADDRESS = "0x176d214F3729054C9c361C06C5aAee6C53276FFe"
-
-//Polygon mainnet
-module.exports.ENDPOINT = "https://polygon-rpc.com";
-// module.exports.ENDPOINT = "https://rpc-mainnet.matic.network";
-
-module.exports.ADDRESS = "0xdfcbcc1d5333c95f88ca869d56caa308c1c30b77"; //Infinity flies address
-
 module.exports.ABI = [
   {
     "inputs": [],

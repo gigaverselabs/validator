@@ -1,12 +1,3 @@
-// Dev
-// module.exports.ADDRESS = "rwlgt-iiaaa-aaaaa-aaaaa-cai"
-
-// testnet
-module.exports.ADDRESS = "vwm6j-rqaaa-aaaah-qclba-cai"
-
-// mainnet
-// module.exports.ADDRESS = "0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77";
-
 module.exports.IDL = ({ IDL }) => {
   const DepositEntry = IDL.Record({
     'owner' : IDL.Principal,

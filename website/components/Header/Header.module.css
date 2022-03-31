@@ -1,0 +1,117 @@
+.Header {
+  background: #121214;
+  position: fixed;
+  width: 100%;
+  z-index: 1;
+}
+
+.Header > .Header__container {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 12px 30px;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-column-gap: 30px;
+  align-items: center;
+}
+
+.Header_button {
+  margin: auto auto;
+}
+
+.Header_button > button {
+  padding: 8px 16px;
+  border: 1px solid #47BE68;
+  background-color: black;
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(71, 190, 104, 0.2);
+  color: #47BE68;
+  font-size: 16px;
+}
+
+.Header > .Header__container > .Header__search {
+  margin-left: auto;
+  background: #121214;
+  border: 1px solid #ffffff;
+  box-sizing: border-box;
+  width: 80%;
+  max-width: 350px;
+  padding: 4px 8px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-column-gap: 8px;
+  cursor: text;
+}
+
+.Header > .Header__container > .Header__search > input {
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  vertical-align: middle;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.Header > .Header__container > .Header__navigation {
+  margin-left: auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-column-gap: 24px;
+  align-items: center;
+}
+
+.Header > .Header__container > .Header__navigation > a {
+  font-family: 'Roboto Mono', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.Header > .Header__container > .Header__navigation > .Header__icons {
+  color: white;
+}
+
+.Header > .Header__container > .Header__navigation > .Header__icons > * {
+  margin: 5px;
+}
+
+@media (max-width: 1135px) {
+  .Header > .Header__container > .Header__search {
+    max-width: 270px;
+  }
+}
+
+@media (max-width: 840px) {
+  .Header > .Header__container > .Header__navigation > a {
+    font-size: 14px;
+  }
+
+  .Header > .Header__container > .Header__search {
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 720px) {
+  .Header > .Header__container {
+    grid-template-columns: auto;
+    grid-template-rows: repeat(3, auto);
+    grid-row-gap: 16px;
+    padding: 12px 30px;
+  }
+
+  .Header > .Header__container > .Header__search {
+    margin: auto;
+  }
+
+  .Header > .Header__container > .Header__navigation {
+    margin: auto;
+  }
+
+  .Header > .Header__container > .Header__search {
+    max-width: 100%;
+  }
+}
+
