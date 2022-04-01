@@ -15,7 +15,7 @@ import List from '@mui/material/List';
 import Card from '@mui/material/Card';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import { Button, Container, Grid, Typography, ListItemButton, ListItemAvatar, Avatar, TextField, InputAdornment, LinearProgress, Box, Paper } from '@mui/material'
+import { Button, Container, Grid, Typography, ListItemButton, ListItemAvatar, Avatar, TextField, InputAdornment, LinearProgress, Box, Paper, Stack } from '@mui/material'
 import toast from 'react-hot-toast';
 
 
@@ -292,14 +292,14 @@ export default function Home() {
 
         if (tx.direction.outgoing !== undefined) {
           try {
-          let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
-          console.log(result);
-          } catch {}
+            let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
+            console.log(result);
+          } catch { }
 
           console.log("Completing tx");
           // if (result.Ok !== undefined) {
-            let result2 = await signVault.tx_complete(tx.tx);
-            console.log(result2);
+          let result2 = await signVault.tx_complete(tx.tx);
+          console.log(result2);
           // }
         }
       }
@@ -526,9 +526,17 @@ export default function Home() {
   );
 
   return (<>
-    <Box>
+    <Box sx={{ textAlign: 'center' }}>
       <Container maxWidth="xl">
-        <Grid container spacing={2} justifyContent="center" alignItems="flex-start" marginTop={10}>
+        <Typography variant="h2" margin={10}>
+          Polygon-Internet Computer bridge
+        </Typography>
+        <Typography variant="h6">
+          Bridge your Infinity Flies from Polygon to the Internet Computer and back. Connect your Metamask and your Plug wallet.
+        </Typography>
+      </Container>
+      <Container maxWidth="xl">
+        <Grid container spacing={2} justifyContent="center" alignItems="flex-start" marginTop={20}>
           <Grid item xs={5}>
             <Typography variant="h4" textAlign={'center'} margin={'10px'}>
               Polygon

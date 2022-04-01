@@ -99,7 +99,7 @@ module.exports.IDL = ({ IDL }) => {
     'set_paused' : IDL.Func([IDL.Bool], [IDL.Bool], []),
     'set_tx_enabled' : IDL.Func([IDL.Bool], [IDL.Bool], []),
     'symbol' : IDL.Func([], [IDL.Text], ['query']),
-    'tokens' : IDL.Func([], [IDL.Vec(TokenDesc)], ['query']),
+    'tokens' : IDL.Func([], [IDL.Vec(IDL.Nat32)], ['query']),
     'total_supply' : IDL.Func([], [IDL.Nat], ['query']),
     'transaction_notification' : IDL.Func(
         [TransactionNotification],
