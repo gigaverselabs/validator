@@ -13,12 +13,8 @@ global.fetch = require('node-fetch').default;
 const web3 = new Web3(config.EVM_ENDPOINT);
 const vaultContract = new web3.eth.Contract(evm_vault_abi.ABI, config.EVM_VAULT_ADDRESS);
 
-// const getActor = require('../utils/common');
-
-
-
 //IC INIT
-var keyData = fs.readFileSync('../key.json', 'utf8');
+var keyData = fs.readFileSync('../ic_key', 'utf8');
 const { Ed25519KeyIdentity } = require('@dfinity/identity');
 var key = Ed25519KeyIdentity.fromJSON(keyData);
 var principal = key.getPrincipal();
@@ -33,77 +29,33 @@ const signature_vault = Actor.createActor(signature_vault_idl.IDL, {
     canisterId: config.IC_SIG_CANISTER,
 });
 
+const ic_token_idl = require('../defs/giga721');
+const ic_token = Actor.createActor(ic_token_idl.IDL, {
+    agent: http,
+    canisterId: config.IC_TOKEN_CANISTER,
+});
+
 const { Principal } = require('@dfinity/principal');
 
+const privateKey = fs.readFileSync('../eth_key');
 
-// const http = new HttpAgent({ identity: key, host: signature_vault_config.ENDPOINT });
-// http.fetchRootKey();
-
-// const ic_vault = Actor.createActor(ic_vault_config.IDL, {
-//     agent: http,
-//     canisterId: ic_vault_config.ADDRESS,
-// });
-
-// const signature_vault = Actor.createActor(signature_vault_config.IDL, {
-//     agent: http,
-//     canisterId: signature_vault_config.ADDRESS,
-// });
-
-
-
-
-
-function generate_signature(block, tokenId) {
-    const account = web3.eth.accounts.privateKeyToAccount('0x' + config.EVM_KEY);
+function generate_signature(block, token_adr, tokenId, new_owner) {
+    const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
     web3.eth.accounts.wallet.add(account);
     web3.eth.defaultAccount = account.address;
 
     let hash =
-
         web3.utils.soliditySha3(
             { type: 'string', value: 'withdrawERC721' },
             { type: 'uint256', value: block }, //Withdrawal ID
-            { type: 'address', value: '0x5b8ee6e5BD49812bf25c12dC1995217304f2b21B' }, //User for which token should be withdrawn
-            { type: 'address', value: '0xdfcbcc1d5333c95f88ca869d56caa308c1c30b77' }, //Token contract address
+            { type: 'address', value: new_owner }, //User for which token should be withdrawn
+            { type: 'address', value: token_adr }, //Token contract address
             { type: 'uint256', value: tokenId }
         );
-    // web3.eth.abi.encodeParameters(
-    //     ['string','uint256','address','address','uint256'], 
-    //     [
-    //         'withdrawERC721', 
-    //         block, //Withdrawal ID
-    //         '0x5b8ee6e5BD49812bf25c12dC1995217304f2b21B', //User for which token should be withdrawn
-    //         '0xdfcbcc1d5333c95f88ca869d56caa308c1c30b77', //Token contract address
-    //         tokenId] //Token Id
-    //     );
-
-    // abi.encodePacked(
-    //     "withdrawERC721",
-    //     _withdrawalId,
-    //     _user,
-    //     _token,
-    //     _tokenId
-    // )
-
-    // var hash = web3.utils.soliditySha3(message);
     console.log(hash);
 
-    // var sig_job = web3.eth.sign(hash, account.address);
-    // var signature = await sig_job;
-
-    let signature = sign(hash, '0x' + config.EVM_KEY);
+    let signature = sign(hash, '0x' + privateKey);
     console.log("Signature: " + signature);
-
-    // var recovered = recover(hash, signature);
-
-    // console.log(recovered);
-    // console.log(account.address);
-
-    // let call = vaultContract.methods.verifySignatures(hash, signature);
-
-    // let result = await call.call();
-
-    // console.log(result);
 
     return signature;
 }
@@ -114,50 +66,85 @@ async function storeSignature(tx, owner, token, token_id, sig, direction, block)
 };
 
 
-async function process_token_burn(token_id) {
-
-    let block_id = 2;
-
-
-    let owner = Principal.from("ucoje-n5scm-5ag2l-xpy42-o56he-nu5jr-iq3vm-25e7q-tuq5y-i7vpi-qae");
+async function process_token_burn(block, new_owner) {
+    let block_id = Number(block.index);
+    let owner = block.from[0];
     let token = "0xdfcbcc1d5333c95f88ca869d56caa308c1c30b77";
+    let token_id = block.token_id;
 
-    let tx = web3.utils.sha3(block_id+token+owner.toString());
+    let tx = web3.utils.sha3(block_id + token + owner.toString());
 
-    let signature = generate_signature(block_id, token_id);
+    let signature = generate_signature(block_id, token, token_id, new_owner);
     let direction = { outgoing: null };
 
-    console.log("Tx: "+tx);
+    console.log("Tx: " + tx);
 
     let result = await storeSignature(tx, owner, token, token_id, signature, direction, block_id);
 }
 
+async function process_block(block_id) {
+    let wallet = await signature_vault.get_wallet(block_id);
+    if (wallet.length === 0) throw new Error("No wallet found");
 
-// generate_signature(1, 908);
-process_token_burn(909);
+    // let wallet = '0x5b8ee6e5BD49812bf25c12dC1995217304f2b21B';
 
-// var lastBlock = 0;
-var processingBlocks = false;
+    let block = await ic_token.get_history_by_index(block_id);
 
-function loadLastBlock() {
-    try {
-        let raw = fs.readFileSync('lastblock_ic', 'utf8');
-        if (raw.length > 0) {
-            lastBlock = parseInt(raw);
-            console.log('Loaded last block: ' + lastBlock);
+    if (wallet[0][0].toString() === block[0].caller.toString()) {
+        console.log("Principals match!");
+
+        if (block[0].op.burn !== undefined) {
+            //We have detected burning!
+            await process_token_burn(block[0], wallet[0][1]);
+        } else {
+            throw new Error('This is not a burn!');
         }
-    } catch (e) {
 
+
+    } else {
+        throw new Error("Principals does not match!");
     }
 }
 
-async function scanForChanges() {
+var processingBlocks = false;
+async function scanForDeposits() {
     if (processingBlocks) return;
     processingBlocks = true;
 
-    let actor = getActor(true, config.IC_TOKEN_CANISTER,)
 
-    processingBlocks = false;
 }
 
-// setInterval(scanForChanges, 3000);
+loadLastBlock();
+setInterval(scanForDeposits, 3000);
+
+// process_block(14);
+
+// async function handleProcess(req, res) {
+//     try {
+//         let block = Number(req.query.block);
+
+//         console.log("Block processing: " + block);
+
+//         await process_block(block);
+
+//         res.send(ok);
+
+//     } catch (e) {
+//         res.status(500).send('Err ' + e.message);
+//     }
+// }
+
+
+// const express = require('express');
+// const cors = require('cors');
+// const app = express()
+
+// app.use(cors())
+
+// app.get('/process', handleProcess);
+
+// const port = 3100
+
+// app.listen(port, () => {
+//     console.log(`Validator app listening at http://localhost:${port}`)
+// })

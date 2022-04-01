@@ -270,19 +270,37 @@ export default function Home() {
         console.log("Withdrawing token: " + token.toString());
 
         if (tx.direction.incoming !== undefined) {
-          let result = await icVault.withdraw_nft(token.toString(), token_id, signature);
+          let claim_promise = icVault.withdraw_nft(token.toString(), token_id, signature);
+
+          toast.promise(
+            claim_promise,
+            {
+              loading: 'Claiming NFT on IC ...',
+              success: <b>Claiming complete!</b>,
+              error: <b>Claiming error!</b>,
+            }
+          );
+
+          let result = await claim_promise;
           console.log(result);
 
-          let result2 = await signVault.tx_complete(tx.tx);
-          console.log(result2);
+          if (result.Ok !== undefined) {
+            let result2 = await signVault.tx_complete(tx.tx);
+            console.log(result2);
+          }
         }
 
         if (tx.direction.outgoing !== undefined) {
-          // let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
-          // console.log(result);
+          try {
+          let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
+          console.log(result);
+          } catch {}
 
-          let result2 = await signVault.tx_complete(tx.tx);
-          console.log(result2);
+          console.log("Completing tx");
+          // if (result.Ok !== undefined) {
+            let result2 = await signVault.tx_complete(tx.tx);
+            console.log(result2);
+          // }
         }
       }
 
@@ -315,18 +333,18 @@ export default function Home() {
     if (selectedIndex === null) return;
 
     //Check if VAULT is approved for token storage
-    let approved = await tokenContract.methods.isApprovedForAll(walletAddress, vault_config.ADDRESS)
+    let approved = await tokenContract.methods.isApprovedForAll(walletAddress, config.EVM_VAULT_ADDRESS)
       .call();
 
     if (!approved) {
       //Allow vault contract to store NFT from EVM
-      let gasAmount = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).estimateGas({ from: walletAddress })
+      // let gasAmount = await tokenContract.methods.setApprovalForAll(config.EVM_VAULT_ADDRESS, true).estimateGas({ from: walletAddress })
 
-      let baseFee = block.baseFeePerGas * 100000000;
+      // let baseFee = block.baseFeePerGas * 100000000;
 
-      console.log(block.baseFeePerGas);
+      // console.log(block.baseFeePerGas);
 
-      let result = await tokenContract.methods.setApprovalForAll(vault_config.ADDRESS, true).send({
+      let result = await tokenContract.methods.setApprovalForAll(config.EVM_VAULT_ADDRESS, true).send({
         from: walletAddress
       });
 
@@ -335,13 +353,13 @@ export default function Home() {
 
     let tokenId = Number(selectedIndex)
 
-    let gasAmount = await vaultContract.methods.depositERC721For(
-      principalId.toString(),
-      token_config.ADDRESS,
-      tokenId
-    ).estimateGas({ from: walletAddress, value: 0 })
+    // let gasAmount = await vaultContract.methods.depositERC721For(
+    //   principalId.toString(),
+    //   config.EVM_TOKEN_ADDRESS,
+    //   tokenId
+    // ).estimateGas({ from: walletAddress, value: 0 })
 
-    let token_address = token_config.ADDRESS
+    let token_address = config.EVM_TOKEN_ADDRESS
     let prin_str = principalId.toString();
 
     let result = await vaultContract.methods.depositERC721For(
@@ -377,8 +395,14 @@ export default function Home() {
       );
 
       let result = await send_promise;
+      console.log("Burn result: ");
+      console.log(result);
 
-      console.log("Burn result: " + result);
+      let store_result = await signVault.store_wallet(result.Ok, walletAddress);
+      console.log("Store result: ");
+      console.log(store_result);
+
+      // axios.get()
 
     } catch (e) {
       console.error(e);
@@ -451,13 +475,17 @@ export default function Home() {
 
   const [direction, setDirection] = useState(null);
 
- 
+
   const [selectedIndex, setSelectedIndex] = React.useState(null);
 
   const handleListItemClick = (event, index) => {
     setSelectedIndex(index);
-    if (contains(ownedTokens, index)) setDirection(true);
-    if (contains(icOwnedTokens, index)) setDirection(false);
+
+    if (principalId === null) setDirection(null);
+    else {
+      if (contains(ownedTokens, index)) setDirection(true);
+      if (contains(icOwnedTokens, index)) setDirection(false);
+    }
   };
 
   const customList = (title, items) => (
@@ -531,7 +559,7 @@ export default function Home() {
                 aria-label="move selected left"
                 onClick={returnToken}
               >
-                IC &lt;- POLYGON
+                Polygon &lt;- IC
               </Button>
 
             </Grid>
