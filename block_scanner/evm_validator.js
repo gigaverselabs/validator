@@ -89,7 +89,6 @@ async function scanForDeposits() {
                 console.log("IC Token: " + sidechainToken);
                 console.log("Token No: " + token_id);
 
-                try {
                     let owner_principal = Principal.fromText(owner);
                     // let sidechain_addr = Principal.fromText(sidechainToken);
 
@@ -97,14 +96,14 @@ async function scanForDeposits() {
 
                     console.log("Tx: " + item.transactionHash);
                     let direction = { incoming: null };
-
+                    try {
+                     
                     let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
+                    } catch (e) {
+                        console.log("Error on signature storage: "+e.message);
+                    }
 
                     // await getSignature(item.transactionHash);
-                } catch (e) {
-                    console.log(e.message);
-                    throw e;
-                }
 
                 lastBlock = item.blockNumber + 1;
                 saveLastBlock();
