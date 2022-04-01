@@ -19,11 +19,15 @@ module.exports.IDL = ({ IDL }) => {
         [IDL.Vec(SignatureDesc)],
         ['query'],
       ),
-    'get_signature' : IDL.Func([IDL.Text], [IDL.Opt(SignatureDesc)], ['query']),
-    'get_signatures' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(IDL.Vec(SignatureDesc))],
-        ['query'],
+    'get_wallet' : IDL.Func(
+        [IDL.Nat32],
+        [IDL.Opt(IDL.Tuple(IDL.Principal, IDL.Text))],
+        [],
+      ),
+    'get_wallets' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Nat32, IDL.Tuple(IDL.Principal, IDL.Text)))],
+        [],
       ),
     'owner' : IDL.Func([], [IDL.Principal], ['query']),
     'set_owner' : IDL.Func([IDL.Principal], [IDL.Bool], []),
@@ -41,6 +45,7 @@ module.exports.IDL = ({ IDL }) => {
         [IDL.Bool],
         [],
       ),
+    'store_wallet' : IDL.Func([IDL.Nat32, IDL.Text], [IDL.Bool], []),
     'tx_complete' : IDL.Func([IDL.Text], [IDL.Bool], []),
   });
   return SignatureVault;

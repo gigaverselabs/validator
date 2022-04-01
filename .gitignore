@@ -40,3 +40,8 @@ block_scanner/config.js
 block_scanner/key.json
 block_scanner/ic_config.js
 block_scanner/lastblock
+
+
+key
+eth_key
+ic_key

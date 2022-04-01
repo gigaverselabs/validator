@@ -4,13 +4,7 @@ const { Ed25519KeyIdentity } = require('@dfinity/identity');
 const { Actor, HttpAgent } = require('@dfinity/agent');
 const { Principal } = require('@dfinity/principal');
 const config = require('../config');
-
 const evm_vault_abi = require('../defs/evm_vault')
-
-// const ic_config = require('./ic_config');
-// const vault_config = require('./vault_config');
-// const ic_vault_config = require('./ic_vault_config');
-// const signature_vault_config = require('./signature_vault_config');
 
 global.fetch = require('node-fetch').default;
 
@@ -19,7 +13,7 @@ const web3 = new Web3(config.EVM_ENDPOINT);
 const vaultContract = new web3.eth.Contract(evm_vault_abi.ABI, config.EVM_VAULT_ADDRESS);
 
 //IC INIT
-var keyData = fs.readFileSync('../key.json', 'utf8');
+var keyData = fs.readFileSync('../ic_key', 'utf8');
 var key = Ed25519KeyIdentity.fromJSON(keyData);
 var principal = key.getPrincipal();
 console.log("Using principal: " + principal.toString());
@@ -40,6 +34,8 @@ const signature_vault = Actor.createActor(signature_vault_idl.IDL, {
     canisterId: config.IC_SIG_CANISTER,
 });
 
+const privateKey = fs.readFileSync('../eth_key');
+
 var lastBlock = 0;
 var processingBlocks = false;
 
@@ -56,8 +52,7 @@ function loadLastBlock() {
 }
 
 function saveLastBlock() {
-    console.log("Saving last block")
-    fs.writeFileSync('lastblock', lastBlock + "");
+    fs.writeFileSync('lastblock_evm', lastBlock + "");
 }
 
 async function scanForDeposits() {
@@ -67,7 +62,6 @@ async function scanForDeposits() {
 
     try {
         let block = await (web3.eth.getBlock("latest"));
-        console.log(block.number);
 
         if (lastBlock == 0) {
             lastBlock = block.number - 10;
@@ -78,7 +72,6 @@ async function scanForDeposits() {
             toBlock: block.number-5
         });
 
-        console.log(events.length);
 
         if (events.length > 0) {
             console.log("Found events: " + events.length);
@@ -92,22 +85,25 @@ async function scanForDeposits() {
 
                 let owner = item.returnValues._sidechainOwner;
                 console.log("Owner: " + owner);
+                console.log("Block: " + item.blockNumber);
                 console.log("IC Token: " + sidechainToken);
                 console.log("Token No: " + token_id);
 
                 try {
                     let owner_principal = Principal.fromText(owner);
-                    let sidechain_addr = Principal.fromText(sidechainToken);
+                    // let sidechain_addr = Principal.fromText(sidechainToken);
 
                     let signature = await createSignature(owner, sidechainToken, token_id);
 
                     console.log("Tx: " + item.transactionHash);
+                    let direction = { incoming: null };
 
-                    let store = await storeSignature(item.transactionHash, owner_principal, sidechain_addr, token_id, signature);
+                    let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
 
-                    await getSignature(item.transactionHash);
+                    // await getSignature(item.transactionHash);
                 } catch (e) {
                     console.log(e.message);
+                    throw e;
                 }
 
                 lastBlock = item.blockNumber + 1;
@@ -124,9 +120,11 @@ async function scanForDeposits() {
 }
 
 //tx - tx hash, owner - IC Principal, sig - signature
-async function storeSignature(tx, owner, token, token_id, sig) {
-    let result = await signature_vault.store_signature(tx, owner, token, token_id, web3.utils.hexToBytes(sig));
+async function storeSignature(tx, owner, token, token_id, sig, direction, block) {
+    let result = await signature_vault.store_signature(tx, owner, token, token_id, web3.utils.hexToBytes(sig), direction, block);
     console.log(result);
+
+    return result;
 };
 
 async function getSignature(tx) {
@@ -140,7 +138,7 @@ async function createSignature(owner, token, token_id) {
     let message = "withdraw_nft," + owner + "," + token + "," + token_id;
     var hash = web3.utils.soliditySha3(message);
 
-    const account = web3.eth.accounts.privateKeyToAccount('0x' + ic_config.icVaultPrivatKey);
+    const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
     web3.eth.accounts.wallet.add(account);
     web3.eth.defaultAccount = account.address;
     // console.log(account.address);
