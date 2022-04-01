@@ -82,20 +82,20 @@ async function process_token_burn(block, new_owner) {
     let result = await storeSignature(tx, owner, token, token_id, signature, direction, block_id);
 }
 
-async function process_block(block_id) {
-    let wallet = await signature_vault.get_wallet(block_id);
-    if (wallet.length === 0) throw new Error("No wallet found");
+async function process_block(block_id, wallet) {
+    // let wallet = await signature_vault.get_wallet(block_id);
+    // if (wallet.length === 0) throw new Error("No wallet found");
 
     // let wallet = '0x5b8ee6e5BD49812bf25c12dC1995217304f2b21B';
 
     let block = await ic_token.get_history_by_index(block_id);
 
-    if (wallet[0][0].toString() === block[0].caller.toString()) {
+    if (wallet[0].toString() === block[0].caller.toString()) {
         console.log("Principals match!");
 
         if (block[0].op.burn !== undefined) {
             //We have detected burning!
-            await process_token_burn(block[0], wallet[0][1]);
+            await process_token_burn(block[0], wallet[1]);
         } else {
             throw new Error('This is not a burn!');
         }
@@ -106,15 +106,57 @@ async function process_block(block_id) {
     }
 }
 
+function saveBlocks() {
+    fs.writeFileSync('./blocks', JSON.stringify(processedBlocks));
+}
+
+function loadBlocks() {
+    try {
+        processedBlocks = JSON.parse(fs.readFileSync('./blocks'));
+
+        console.log('Loaded blocks: ' + processedBlocks.length);
+    } catch (e) {
+
+    }
+}
+
+var processedBlocks = [];
+
 var processingBlocks = false;
 async function scanForDeposits() {
     if (processingBlocks) return;
     processingBlocks = true;
 
+    try {
 
+        let wallets = await signature_vault.get_wallets();
+
+        wallets.forEach((w) => {
+            let block = w[0];
+            let wallet = w[1];
+
+            if (processedBlocks.indexOf(block) === -1) {
+                try {
+                    process_block(block, wallet);
+                } catch (e) {
+                    console.log("Error while processing block:" + e);
+                }
+                processedBlocks.push(block);
+                saveBlocks();
+            }
+        });
+
+    } catch (e) {
+        console.error(e);
+    }
+
+    processingBlocks = false;
 }
 
-loadLastBlock();
+loadBlocks();
+// scanForDeposits();
+
+// loadLastBlock();
 setInterval(scanForDeposits, 3000);
 
 // process_block(14);
