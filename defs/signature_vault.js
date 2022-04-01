@@ -47,6 +47,7 @@ module.exports.IDL = ({ IDL }) => {
       ),
     'store_wallet' : IDL.Func([IDL.Nat32, IDL.Text], [IDL.Bool], []),
     'tx_complete' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'tx_revert' : IDL.Func([IDL.Text], [IDL.Bool], []),
   });
   return SignatureVault;
 };
