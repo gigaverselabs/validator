@@ -45,3 +45,4 @@ block_scanner/lastblock
 key
 eth_key
 ic_key
+config.js
