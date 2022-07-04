@@ -39,8 +39,10 @@ const { Principal } = require('@dfinity/principal');
 
 const privateKey = fs.readFileSync('../eth_key');
 
+
 function generate_signature(block, token_adr, tokenId, new_owner) {
     const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
+    console.log('Address: '+account.address);
     web3.eth.accounts.wallet.add(account);
     web3.eth.defaultAccount = account.address;
 
@@ -52,7 +54,7 @@ function generate_signature(block, token_adr, tokenId, new_owner) {
             { type: 'address', value: token_adr }, //Token contract address
             { type: 'uint256', value: tokenId }
         );
-    console.log(hash);
+    console.log('Hash: '+hash);
 
     let signature = sign(hash, '0x' + privateKey);
     console.log("Signature: " + signature);
@@ -153,40 +155,8 @@ async function scanForDeposits() {
     processingBlocks = false;
 }
 
-loadBlocks();
-// scanForDeposits();
-
-// loadLastBlock();
-setInterval(scanForDeposits, 3000);
-
-// process_block(14);
-
-// async function handleProcess(req, res) {
-//     try {
-//         let block = Number(req.query.block);
-
-//         console.log("Block processing: " + block);
-
-//         await process_block(block);
-
-//         res.send(ok);
-
-//     } catch (e) {
-//         res.status(500).send('Err ' + e.message);
-//     }
-// }
+generate_signature(1, '0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77', 1234, '0x3Ab0BFa6428775d9E698697955CdEFe793B5Aa98');
 
 
-// const express = require('express');
-// const cors = require('cors');
-// const app = express()
-
-// app.use(cors())
-
-// app.get('/process', handleProcess);
-
-// const port = 3100
-
-// app.listen(port, () => {
-//     console.log(`Validator app listening at http://localhost:${port}`)
-// })
+// loadBlocks();
+// setInterval(scanForDeposits, 3000);

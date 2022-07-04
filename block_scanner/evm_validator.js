@@ -23,6 +23,7 @@ const http = new HttpAgent({ identity: key, host: config.IC_ENDPOINT });
 
 const signature_vault_idl = require('../defs/signature_vault');
 const ic_vault_idl = require('../defs/ic_vault');
+const { rawListeners } = require('process');
 
 const ic_vault = Actor.createActor(ic_vault_idl.IDL, {
     agent: http,
@@ -55,6 +56,64 @@ function saveLastBlock() {
     fs.writeFileSync('lastblock_evm', lastBlock + "");
 }
 
+// processBlock(26616606, 26616830)
+// processBlock(26618638)
+
+// processBlock(28365239);
+// processBlock(28364628);
+// processBlock(28364555);
+// processBlock(28436254);
+
+async function processBlock(block_id_from, block_id_to) {
+    if (block_id_to === undefined) block_id_to = block_id_from;
+
+    let events = await vaultContract.getPastEvents('TokenDeposited', {
+        fromBlock: block_id_from - 1,
+        toBlock: block_id_to+1
+    });
+
+    if (events.length > 0) {
+        console.log("Found events: " + events.length);
+
+        for (ev in events) {
+            let item = events[ev];
+
+            let token = item.returnValues._tokenAddress;
+            let sidechainToken = item.returnValues._sidechainAddress;
+            let token_id = parseInt(item.returnValues._tokenNumber);
+
+            let owner = item.returnValues._sidechainOwner;
+            console.log("Owner: " + owner);
+            console.log("Block: " + item.blockNumber);
+            console.log("IC Token: " + sidechainToken);
+            console.log("Token No: " + token_id);
+
+            let owner_principal = Principal.fromText(owner);
+            // let sidechain_addr = Principal.fromText(sidechainToken);
+
+            let signature = await createSignature(owner, sidechainToken, token_id);
+
+            console.log("Tx: " + item.transactionHash);
+            let direction = { incoming: null };
+            try {
+
+                let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
+            } catch (e) {
+                console.log("Error on signature storage: " + e.message);
+
+                let signs = await signature_vault.get_pending_tx(Principal.from(owner));
+                console.log(signs);
+
+                // let result = await signature_vault.tx_revert(item.transactionHash);
+                // console.log(result);
+            }
+
+            // await getSignature(item.transactionHash);
+        }
+    } else {
+    }
+}
+
 async function scanForDeposits() {
     if (processingBlocks) return;
 
@@ -67,9 +126,16 @@ async function scanForDeposits() {
             lastBlock = block.number - 10;
         }
 
+        let toBlock = block.number - 5;
+        
+        //Do not fetch data of to many blocks
+        if (toBlock - lastBlock > 2000) {
+            toBlock = lastBlock + 2000;
+        }
+
         let events = await vaultContract.getPastEvents('TokenDeposited', {
             fromBlock: lastBlock,
-            toBlock: block.number-5
+            toBlock: toBlock
         });
 
 
@@ -89,27 +155,27 @@ async function scanForDeposits() {
                 console.log("IC Token: " + sidechainToken);
                 console.log("Token No: " + token_id);
 
-                    let owner_principal = Principal.fromText(owner);
-                    // let sidechain_addr = Principal.fromText(sidechainToken);
+                let owner_principal = Principal.fromText(owner);
+                // let sidechain_addr = Principal.fromText(sidechainToken);
 
-                    let signature = await createSignature(owner, sidechainToken, token_id);
+                let signature = await createSignature(owner, sidechainToken, token_id);
 
-                    console.log("Tx: " + item.transactionHash);
-                    let direction = { incoming: null };
-                    try {
-                     
-                    let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
-                    } catch (e) {
-                        console.log("Error on signature storage: "+e.message);
-                    }
+                console.log("Tx: " + item.transactionHash);
+                let direction = { incoming: null };
+                try {
 
-                    // await getSignature(item.transactionHash);
+                    // let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
+                } catch (e) {
+                    console.log("Error on signature storage: " + e.message);
+                }
+
+                // await getSignature(item.transactionHash);
 
                 lastBlock = item.blockNumber + 1;
                 saveLastBlock();
             }
         } else {
-            lastBlock = block.number - 4;
+            lastBlock = toBlock+1;
             saveLastBlock();
         }
     } catch (e) {
@@ -133,6 +199,9 @@ async function getSignature(tx) {
     return raw_sig;
 }
 
+/// Owner - Principal
+/// Token - Principal
+/// TokenId - u128
 async function createSignature(owner, token, token_id) {
     let message = "withdraw_nft," + owner + "," + token + "," + token_id;
     var hash = web3.utils.soliditySha3(message);
@@ -148,7 +217,11 @@ async function createSignature(owner, token, token_id) {
     return signature;
 }
 
-loadLastBlock();
-setInterval(scanForDeposits, 3000);
+// loadLastBlock();
+// setInterval(scanForDeposits, 200);
 
-// scanForDeposits();
+console.log(createSignature(
+    "rwlgt-iiaaa-aaaaa-aaaaa-cai",
+    "rwlgt-iiaaa-aaaaa-aaaaa-cai",
+    1
+))
