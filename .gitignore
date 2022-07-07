@@ -46,3 +46,6 @@ key
 eth_key
 ic_key
 config.js
+
+eth_key_polygon
+ic_key_polygon

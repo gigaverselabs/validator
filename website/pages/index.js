@@ -58,7 +58,7 @@ export default function Home() {
   const web3 = new Web3(config.EVM_ENDPOINT);
   const tokenReadonlyContract = new web3.eth.Contract(evm_token.ABI, config.EVM_TOKEN_ADDRESS)
 
-  const NETWORK_ID = 137; //Polygon Matic
+  const NETWORK_ID = 1; //Polygon Matic
 
   useEffect(async () => {
     signIn()
@@ -82,7 +82,7 @@ export default function Home() {
         window.web3.eth.getChainId()
           .then((chainId) => {
             if (chainId != NETWORK_ID) {
-              alert("You are not on polygon chain. Change network to polygon in metamask or use button 'POLYGON'");
+              alert("You are not on ETH chain. Change network to polygon in metamask or use button 'POLYGON'");
             } else {
               setChainId(chainId);
               setWalletAddress(wallet);
@@ -99,15 +99,20 @@ export default function Home() {
   }
 
   async function switchNetwork() {
+    const chainId = '0x01'; // Mainnet
+    const rpc = 'https://mainnet.infura.io/v3/';
+    const chainName = 'Ethereum';
+    const block = 'https://etherscan.io';
+
     // const chainId = '0x03'; // Ropsten
     // const rpc = 'https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
     // const chainName = 'Ropsten';
     // const block = 'https://ropsten.etherscan.io';
 
-    const chainId = '0x89'; // Polygon
-    const rpc = 'https://polygon-rpc.com';
-    const chainName = 'Polygon';
-    const block = 'https://polygonscan.com';
+    // const chainId = '0x89'; // Polygon
+    // const rpc = 'https://polygon-rpc.com';
+    // const chainName = 'Polygon';
+    // const block = 'https://polygonscan.com';
 
     // const chainId = '0x539'; //Ganache
     // const rpc = 'HTTP://127.0.0.1:7545';
@@ -253,7 +258,7 @@ export default function Home() {
     // await withdrawTokens(pending_tx);
   }
 
-  async function withdrawTokens() {
+  function withdrawTokens() {
     if (icVault === null) return;
     if (isWorking) return;
 
@@ -270,36 +275,66 @@ export default function Home() {
         console.log("Withdrawing token: " + token.toString());
 
         if (tx.direction.incoming !== undefined) {
-          let claim_promise = icVault.withdraw_nft(token.toString(), token_id, signature);
+          // let claim_promise = icVault.withdraw_nft(token.toString(), token_id, tx.tx, signature);
+
+          let claim_promise = new Promise((resolve, reject) => {
+            icVault.withdraw_nft(token.toString(), token_id, tx.tx, signature)
+            .then((data) => {
+              console.log(data);
+  
+              if (data.Err !== undefined) {
+                // throw { message: data.Err };
+  
+                if (data.Err === 'Transaction already processed') {
+                  resolve(data);
+                }
+                else {
+                  reject(data);
+                }
+                // console.log(result2);
+                // let result = await claim_promise;
+              }
+
+              if (data.Ok !== undefined) {
+                resolve(data);
+              }
+            })});
+
+            claim_promise.then((data) => {
+              console.log("Completing tx");
+              signVault.tx_complete(tx.tx).then((x) => {
+                console.log(x);
+              });
+            })
 
           toast.promise(
             claim_promise,
             {
               loading: 'Claiming NFT on IC ...',
               success: <b>Claiming complete!</b>,
-              error: <b>Claiming error!</b>,
+              error: (x) => <b>Claiming error! {x.Err}</b>,
             }
           );
 
-          let result = await claim_promise;
-          console.log(result);
 
-          if (result.Ok !== undefined) {
-            let result2 = await signVault.tx_complete(tx.tx);
-            console.log(result2);
-          }
         }
 
         if (tx.direction.outgoing !== undefined) {
           try {
-            let result = await withdrawFromEth(Number(token_id), signature, Number(tx.block));
-            console.log(result);
+
+            withdrawFromEth(Number(token_id), signature, tx.tx).then((data) => {
+              console.log(data);
+
+            });
           } catch { }
 
           console.log("Completing tx");
-          // if (result.Ok !== undefined) {
-          let result2 = await signVault.tx_complete(tx.tx);
-          console.log(result2);
+          signVault.tx_complete(tx.tx).then((x) => {
+            console.log(x);
+          });
+          // // if (result.Ok !== undefined) {
+          // let result2 = await signVault.tx_complete(tx.tx);
+          // console.log(result2);
           // }
         }
       }
@@ -430,8 +465,14 @@ export default function Home() {
   //   }
   // }
 
+  let withdrawing = false;
+
   async function withdrawFromEth(tokenId, signature, block) {
+    if (withdrawing) return;
+    withdrawing = true;
     // await ensureApproved();
+
+    try {
 
     let sig = Web3.utils.bytesToHex(signature);
 
@@ -459,6 +500,11 @@ export default function Home() {
 
     getOwnedTokens();
     getPendingTx();
+    } catch (e) {
+      console.error(e);
+    } 
+
+    withdrawing = false;
   }
 
   useEffect(() => {
@@ -513,10 +559,10 @@ export default function Home() {
               <ListItemAvatar>
                 <Avatar
                   alt={`Avatar n°${value}`}
-                  src={`https://cache.icpunks.com/flies/${value}`}
+                  src={`https://cache.icpunks.com/infinityfrogs/Token/${value}`}
                 />
               </ListItemAvatar>
-              <ListItemText id={labelId} primary={`Fly #${value}`} />
+              <ListItemText id={labelId} primary={`Infinity Frog #${value}`} />
             </ListItem>
           );
         })}
@@ -529,17 +575,17 @@ export default function Home() {
     <Box sx={{ textAlign: 'center' }}>
       <Container maxWidth="xl">
         <Typography variant="h2" margin={10}>
-          Polygon-Internet Computer bridge
+          Ethereum-Internet Computer bridge
         </Typography>
         <Typography variant="h6">
-          Bridge your Infinity Flies from Polygon to the Internet Computer and back. Connect your Metamask and your Plug wallet.
+          Bridge your Infinity Frogs from Ethereum to the Internet Computer and back. Connect your Metamask and your Plug wallet.
         </Typography>
       </Container>
       <Container maxWidth="xl">
         <Grid container spacing={2} justifyContent="center" alignItems="flex-start" marginTop={20}>
           <Grid item xs={5}>
             <Typography variant="h4" textAlign={'center'} margin={'10px'}>
-              Polygon
+              Ethereum
             </Typography>
 
             {signedIn ? <Button variant="contained" size="large" onClick={signIn}>{walletAddress}</Button> :
@@ -557,7 +603,7 @@ export default function Home() {
                 aria-label="move selected right"
                 onClick={bridgeToken}
               >
-                POLYGON -&gt; IC
+                ETH -&gt; IC
               </Button>
               <Button
                 sx={{ my: 0.5 }}
@@ -567,7 +613,7 @@ export default function Home() {
                 aria-label="move selected left"
                 onClick={returnToken}
               >
-                Polygon &lt;- IC
+                ETH &lt;- IC
               </Button>
 
             </Grid>
@@ -584,14 +630,14 @@ export default function Home() {
 
           <Grid item xs={5}>
             <Typography variant="h4" textAlign={'center'} margin={'10px'}>
-              Polygon -&gt; IC
+              Ethereum -&gt; IC
             </Typography>
             {customList('Chosen', pendingIds)}
           </Grid>
 
           <Grid item xs={5}>
             <Typography variant="h4" textAlign={'center'} margin={'10px'}>
-              IC -&gt; Polygon
+              IC -&gt; Ethereum
             </Typography>
             {customList('Chosen', returningIds)}
           </Grid>
