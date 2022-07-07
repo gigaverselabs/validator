@@ -65,8 +65,12 @@ function generate_signature(block, token_adr, tokenId, new_owner) {
 }
 
 async function storeSignature(tx, owner, token, token_id, sig, direction, block) {
+    try {
     let result = await signature_vault.store_signature(tx, owner, token, token_id, web3.utils.hexToBytes(sig), direction, block);
     console.log(result);
+    } catch (e) {
+        console.error(e);
+    }
 };
 
 
