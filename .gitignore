@@ -49,3 +49,8 @@ config.js
 
 eth_key_polygon
 ic_key_polygon
+
+blocks
+blocks_old
+lastblock_evm
+lastblock_evm_old
