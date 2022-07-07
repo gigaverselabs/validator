@@ -38,6 +38,8 @@ const ic_token = Actor.createActor(ic_token_idl.IDL, {
 const { Principal } = require('@dfinity/principal');
 
 const privateKey = fs.readFileSync('../eth_key');
+const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
+console.log("Using ETH Validator: "+account.address);
 
 
 function generate_signature(block, token_adr, tokenId, new_owner) {
@@ -71,12 +73,12 @@ async function storeSignature(tx, owner, token, token_id, sig, direction, block)
 async function process_token_burn(block, new_owner) {
     let block_id = Number(block.index);
     let owner = block.from[0];
-    let token = "0xdfcbcc1d5333c95f88ca869d56caa308c1c30b77";
+    let token = "0xA2480eB41Dd1F2B0aBADe9f305826C544d47f696";
     let token_id = block.token_id;
 
-    let tx = web3.utils.sha3(block_id + token + owner.toString());
+    let tx = web3.utils.sha3(block_id + token + token_id + owner.toString());
 
-    let signature = generate_signature(block_id, token, token_id, new_owner);
+    let signature = generate_signature(tx, token, token_id, new_owner);
     let direction = { outgoing: null };
 
     console.log("Tx: " + tx);
@@ -155,8 +157,8 @@ async function scanForDeposits() {
     processingBlocks = false;
 }
 
-generate_signature(1, '0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77', 1234, '0x3Ab0BFa6428775d9E698697955CdEFe793B5Aa98');
+// generate_signature(1, '0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77', 1234, '0x3Ab0BFa6428775d9E698697955CdEFe793B5Aa98');
 
 
-// loadBlocks();
-// setInterval(scanForDeposits, 3000);
+loadBlocks();
+setInterval(scanForDeposits, 3000);

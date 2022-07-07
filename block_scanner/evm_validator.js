@@ -36,6 +36,8 @@ const signature_vault = Actor.createActor(signature_vault_idl.IDL, {
 });
 
 const privateKey = fs.readFileSync('../eth_key');
+const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
+console.log("Using ETH Validator: "+account.address);
 
 var lastBlock = 0;
 var processingBlocks = false;
@@ -69,7 +71,7 @@ async function processBlock(block_id_from, block_id_to) {
 
     let events = await vaultContract.getPastEvents('TokenDeposited', {
         fromBlock: block_id_from - 1,
-        toBlock: block_id_to+1
+        toBlock: block_id_to + 1
     });
 
     if (events.length > 0) {
@@ -91,7 +93,7 @@ async function processBlock(block_id_from, block_id_to) {
             let owner_principal = Principal.fromText(owner);
             // let sidechain_addr = Principal.fromText(sidechainToken);
 
-            let signature = await createSignature(owner, sidechainToken, token_id);
+            let signature = await createSignature(item.transactionHash, owner, sidechainToken, token_id);
 
             console.log("Tx: " + item.transactionHash);
             let direction = { incoming: null };
@@ -127,7 +129,7 @@ async function scanForDeposits() {
         }
 
         let toBlock = block.number - 5;
-        
+
         //Do not fetch data of to many blocks
         if (toBlock - lastBlock > 2000) {
             toBlock = lastBlock + 2000;
@@ -158,13 +160,13 @@ async function scanForDeposits() {
                 let owner_principal = Principal.fromText(owner);
                 // let sidechain_addr = Principal.fromText(sidechainToken);
 
-                let signature = await createSignature(owner, sidechainToken, token_id);
+                let signature = await createSignature(item.transactionHash, owner, sidechainToken, token_id);
 
                 console.log("Tx: " + item.transactionHash);
                 let direction = { incoming: null };
                 try {
 
-                    // let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
+                    let store = await storeSignature(item.transactionHash, owner_principal, sidechainToken, token_id, signature, direction, Number(item.blockNumber));
                 } catch (e) {
                     console.log("Error on signature storage: " + e.message);
                 }
@@ -175,7 +177,7 @@ async function scanForDeposits() {
                 saveLastBlock();
             }
         } else {
-            lastBlock = toBlock+1;
+            lastBlock = toBlock + 1;
             saveLastBlock();
         }
     } catch (e) {
@@ -202,8 +204,8 @@ async function getSignature(tx) {
 /// Owner - Principal
 /// Token - Principal
 /// TokenId - u128
-async function createSignature(owner, token, token_id) {
-    let message = "withdraw_nft," + owner + "," + token + "," + token_id;
+async function createSignature(withdrawal_id, owner, token, token_id) {
+    let message = "withdraw_nft," + withdrawal_id + "," + owner + "," + token + "," + token_id;
     var hash = web3.utils.soliditySha3(message);
 
     const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
@@ -217,11 +219,18 @@ async function createSignature(owner, token, token_id) {
     return signature;
 }
 
-// loadLastBlock();
-// setInterval(scanForDeposits, 200);
+loadLastBlock();
+setInterval(scanForDeposits, 200);
 
-console.log(createSignature(
-    "rwlgt-iiaaa-aaaaa-aaaaa-cai",
-    "rwlgt-iiaaa-aaaaa-aaaaa-cai",
-    1
-))
+// async function run() {
+//     const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
+//     console.log("Account: " + account.address);
+
+//     console.log(await createSignature(
+//         "tx_hash",
+//         "rwlgt-iiaaa-aaaaa-aaaaa-cai",
+//         "rwlgt-iiaaa-aaaaa-aaaaa-cai",
+//         1
+//     ))
+// }
+// run();

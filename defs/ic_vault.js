@@ -18,7 +18,7 @@ module.exports.IDL = ({ IDL }) => {
     'withdrawal_count' : IDL.Func([], [IDL.Nat], ['query']),
     'get_withdrawals' : IDL.Func([IDL.Nat], [IDL.Vec(WithdrawalEntry)], ['query']),
     
-    'withdraw_nft' : IDL.Func([IDL.Text, IDL.Nat, IDL.Vec(IDL.Nat8)], [Result], []),
+    'withdraw_nft' : IDL.Func([IDL.Text, IDL.Nat, IDL.Text, IDL.Vec(IDL.Nat8)], [Result], []),
     'transfer_notification' : IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat, IDL.Nat], [Result], []),
   });
   return Vault;
