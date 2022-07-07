@@ -161,8 +161,6 @@ async function scanForDeposits() {
     processingBlocks = false;
 }
 
-// generate_signature(1, '0xdFcBCc1D5333c95F88CA869D56cAA308c1C30b77', 1234, '0x3Ab0BFa6428775d9E698697955CdEFe793B5Aa98');
-
 
 loadBlocks();
 setInterval(scanForDeposits, 3000);
