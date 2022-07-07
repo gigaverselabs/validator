@@ -35,7 +35,7 @@ const signature_vault = Actor.createActor(signature_vault_idl.IDL, {
     canisterId: config.IC_SIG_CANISTER,
 });
 
-const privateKey = fs.readFileSync('../eth_key').trim();
+const privateKey = fs.readFileSync('../eth_key');
 const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
 console.log("Using ETH Validator: "+account.address);
 
@@ -220,7 +220,7 @@ async function createSignature(withdrawal_id, owner, token, token_id) {
 }
 
 loadLastBlock();
-setInterval(scanForDeposits, 200);
+setInterval(scanForDeposits, 3000);
 
 // async function run() {
 //     const account = web3.eth.accounts.privateKeyToAccount('0x' + privateKey);
