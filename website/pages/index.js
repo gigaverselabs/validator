@@ -17,6 +17,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import { Button, Container, Grid, Typography, ListItemButton, ListItemAvatar, Avatar, TextField, InputAdornment, LinearProgress, Box, Paper, Stack } from '@mui/material'
 import toast from 'react-hot-toast';
+import { useAuth } from '../utils/auth';
 
 
 function contains(arr, i) {
@@ -28,6 +29,7 @@ function getShortPrincipal(p) {
 }
 
 export default function Home() {
+  const auth = useAuth()
 
   // FOR WALLET
   const [signedIn, setSignedIn] = useState(false)
@@ -35,7 +37,6 @@ export default function Home() {
   const [chainId, setChainId] = useState(null);
 
   // FOR IC
-  const [principalId, setPrincipalId] = useState(null);
   const [signVault, setSignVault] = useState(null);
   const [icVault, setIcVault] = useState(null);
   const [icToken, setIcToken] = useState(null);
@@ -58,7 +59,7 @@ export default function Home() {
   const web3 = new Web3(config.EVM_ENDPOINT);
   const tokenReadonlyContract = new web3.eth.Contract(evm_token.ABI, config.EVM_TOKEN_ADDRESS)
 
-  const NETWORK_ID = 1; //Polygon Matic
+  const NETWORK_ID = 1; //ETH Mainnet
 
   useEffect(async () => {
     signIn()
@@ -183,69 +184,39 @@ export default function Home() {
   useEffect(() => getOwnedTokens(), [tokenContract]);
 
   async function plugConnect() {
-    // Canister Ids
-
-    // Whitelist
-    const whitelist = [
-      config.IC_SIG_CANISTER,
-      config.IC_VAULT_CANISTER,
-      config.IC_TOKEN_CANISTER
-    ];
-
-    // Host
-    const host = config.IC_ENDPOINT;
-
-    // Make the request
-    const result = await window.ic.plug.requestConnect({
-      whitelist,
-      host,
-    });
-
-    const connectionState = result ? "allowed" : "denied";
-    console.log(`The Connection was ${connectionState}!`);
-    // } else {
-    //   console.log(`Plug already connected!`);
-    // }
-    // // Get the user principal id
-    const principalId = await window.ic.plug.agent.getPrincipal();
-    console.log(`Plug's user principal Id is ${principalId}`);
-    window.ic.plug.agent.fetchRootKey();
-
-    setPrincipalId(principalId);
-
-
-    // Create an actor to interact with the NNS Canister
-    // we pass the NNS Canister id and the interface factory
-    const sign_vault = await window.ic.plug.createActor({
-      canisterId: config.IC_SIG_CANISTER,
-      interfaceFactory: sign_vault_idl.IDL,
-    });
-
-    setSignVault(sign_vault);
-
-
-    // Create an actor to interact with the NNS Canister
-    // we pass the NNS Canister id and the interface factory
-    const ic_vault = await window.ic.plug.createActor({
-      canisterId: config.IC_VAULT_CANISTER,
-      interfaceFactory: ic_vault_idl.IDL,
-    });
-
-    setIcVault(ic_vault);
-
-    // Create an actor to interact with the NNS Canister
-    // we pass the NNS Canister id and the interface factory
-    const ic_token = await window.ic.plug.createActor({
-      canisterId: config.IC_TOKEN_CANISTER,
-      interfaceFactory: ic_token_idl.IDL,
-    });
-
-    setIcToken(ic_token);
+    auth.login();
   }
+
+  useEffect(() => {
+    if (auth.principal !== null && auth.principal !== undefined && auth.wallet !== undefined) {
+      async function loadCanisters() {
+        // Create an actor to interact with the NNS Canister
+        // we pass the NNS Canister id and the interface factory
+        const sign_vault = await auth.wallet.getActor(config.IC_SIG_CANISTER, sign_vault_idl.IDL)
+        setSignVault(sign_vault);
+
+
+        // Create an actor to interact with the NNS Canister
+        // we pass the NNS Canister id and the interface factory
+        const ic_vault = await auth.wallet.getActor(config.IC_VAULT_CANISTER, ic_vault_idl.IDL)
+        setIcVault(ic_vault);
+
+        // Create an actor to interact with the NNS Canister
+        // we pass the NNS Canister id and the interface factory
+        const ic_token = await auth.wallet.getActor(config.IC_TOKEN_CANISTER, ic_token_idl.IDL)
+        setIcToken(ic_token);
+
+      }
+      loadCanisters();
+    }
+
+  }, [auth.principal, auth.wallet]);
 
   async function getPendingTx() {
     if (signVault === null) return;
-    const pending_tx = await signVault.get_pending_tx(principalId);
+    if (auth.principal === undefined) return;
+
+    const pending_tx = await signVault.get_pending_tx(auth.principal);
     // console.log("Pending Signature count: " + pending_tx.length);
 
     const pendingIds = pending_tx.filter((x) => x.direction.incoming !== undefined).map((x) => x.tokenId);
@@ -279,33 +250,34 @@ export default function Home() {
 
           let claim_promise = new Promise((resolve, reject) => {
             icVault.withdraw_nft(token.toString(), token_id, tx.tx, signature)
-            .then((data) => {
-              console.log(data);
-  
-              if (data.Err !== undefined) {
-                // throw { message: data.Err };
-  
-                if (data.Err === 'Transaction already processed') {
+              .then((data) => {
+                console.log(data);
+
+                if (data.Err !== undefined) {
+                  // throw { message: data.Err };
+
+                  if (data.Err === 'Transaction already processed') {
+                    resolve(data);
+                  }
+                  else {
+                    reject(data);
+                  }
+                  // console.log(result2);
+                  // let result = await claim_promise;
+                }
+
+                if (data.Ok !== undefined) {
                   resolve(data);
                 }
-                else {
-                  reject(data);
-                }
-                // console.log(result2);
-                // let result = await claim_promise;
-              }
+              })
+          });
 
-              if (data.Ok !== undefined) {
-                resolve(data);
-              }
-            })});
-
-            claim_promise.then((data) => {
-              console.log("Completing tx");
-              signVault.tx_complete(tx.tx).then((x) => {
-                console.log(x);
-              });
-            })
+          claim_promise.then((data) => {
+            console.log("Completing tx");
+            signVault.tx_complete(tx.tx).then((x) => {
+              console.log(x);
+            });
+          })
 
           toast.promise(
             claim_promise,
@@ -387,15 +359,8 @@ export default function Home() {
     }
 
     let tokenId = Number(selectedIndex)
-
-    // let gasAmount = await vaultContract.methods.depositERC721For(
-    //   principalId.toString(),
-    //   config.EVM_TOKEN_ADDRESS,
-    //   tokenId
-    // ).estimateGas({ from: walletAddress, value: 0 })
-
     let token_address = config.EVM_TOKEN_ADDRESS
-    let prin_str = principalId.toString();
+    let prin_str = auth.principal.toString();
 
     let result = await vaultContract.methods.depositERC721For(
       prin_str,
@@ -474,35 +439,35 @@ export default function Home() {
 
     try {
 
-    let sig = Web3.utils.bytesToHex(signature);
+      let sig = Web3.utils.bytesToHex(signature);
 
-    let gasAmount = await vaultContract.methods.withdrawERC721For(
-      block,
-      walletAddress,
-      config.EVM_TOKEN_ADDRESS,
-      tokenId,
-      sig
-    ).estimateGas({ from: walletAddress, value: 0 })
+      let gasAmount = await vaultContract.methods.withdrawERC721For(
+        block,
+        walletAddress,
+        config.EVM_TOKEN_ADDRESS,
+        tokenId,
+        sig
+      ).estimateGas({ from: walletAddress, value: 0 })
 
-    console.log('Estimated gas: ' + gasAmount);
+      console.log('Estimated gas: ' + gasAmount);
 
-    let result = await vaultContract.methods.withdrawERC721For(
-      block,
-      walletAddress,
-      config.EVM_TOKEN_ADDRESS,
-      tokenId,
-      sig
-    ).send({
-      from: walletAddress,
-    });
+      let result = await vaultContract.methods.withdrawERC721For(
+        block,
+        walletAddress,
+        config.EVM_TOKEN_ADDRESS,
+        tokenId,
+        sig
+      ).send({
+        from: walletAddress,
+      });
 
-    console.log(result);
+      console.log(result);
 
-    getOwnedTokens();
-    getPendingTx();
+      getOwnedTokens();
+      getPendingTx();
     } catch (e) {
       console.error(e);
-    } 
+    }
 
     withdrawing = false;
   }
@@ -513,21 +478,21 @@ export default function Home() {
 
   async function getIcTokens() {
     if (icToken === null) return;
+    if (auth.principal === undefined) return;
+    if (auth.walet === undefined) return;        
 
-    let result = await icToken.user_tokens(principalId);
+    let result = await icToken.user_tokens(auth.principal);
 
     setIcOwnedTokens(result);
   }
 
   const [direction, setDirection] = useState(null);
-
-
   const [selectedIndex, setSelectedIndex] = React.useState(null);
 
   const handleListItemClick = (event, index) => {
     setSelectedIndex(index);
 
-    if (principalId === null) setDirection(null);
+    if (auth.principal === null || auth.principal === undefined) setDirection(null);
     else {
       if (contains(ownedTokens, index)) setDirection(true);
       if (contains(icOwnedTokens, index)) setDirection(false);
@@ -578,7 +543,7 @@ export default function Home() {
           Ethereum-Internet Computer bridge
         </Typography>
         <Typography variant="h6">
-          Bridge your Infinity Frogs from Ethereum to the Internet Computer and back. Connect your Metamask and your Plug wallet.
+          Bridge your Infinity Frogs from Ethereum to the Internet Computer and back. Connect your Metamask and your Internet Computer (Plug or Infinity Wallet) wallet.
         </Typography>
       </Container>
       <Container maxWidth="xl">
@@ -622,8 +587,8 @@ export default function Home() {
             <Typography variant="h4" textAlign={'center'} margin={'10px'}>
               Internet Computer
             </Typography>
-            {principalId !== null ? <Button variant="contained" size="large" onClick={plugConnect}>{getShortPrincipal(principalId.toString())}</Button> :
-              <Button variant="contained" size="large" onClick={plugConnect}>PLUG</Button>}
+            {auth.principal !== undefined ? <Button variant="contained" size="large" onClick={plugConnect}>{getShortPrincipal(auth.principal.toString())}</Button> :
+              <Button variant="contained" size="large" onClick={plugConnect}>IC</Button>}
             {customList('Chosen', icOwnedTokens)}
           </Grid>
 
