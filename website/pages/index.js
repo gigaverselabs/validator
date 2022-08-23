@@ -474,12 +474,12 @@ export default function Home() {
 
   useEffect(() => {
     getIcTokens();
-  }, [icToken]);
+  }, [icToken, auth.principal, auth.wallet]);
 
   async function getIcTokens() {
     if (icToken === null) return;
     if (auth.principal === undefined) return;
-    if (auth.walet === undefined) return;        
+    if (auth.wallet === undefined) return;        
 
     let result = await icToken.user_tokens(auth.principal);
 
