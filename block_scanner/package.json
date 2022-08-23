@@ -11,19 +11,20 @@
     "@dfinity/agent": "0.10.1",
     "@dfinity/auth-client": "0.10.1",
     "@dfinity/authentication": "0.10.1",
+    "@dfinity/candid": "0.10.1",
     "@dfinity/identity": "0.10.1",
     "@dfinity/principal": "0.10.1",
-    "@dfinity/candid": "0.10.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
+    "ethereum-multicall": "^2.14.1",
     "express": "^4.17.1"
   },
   "devDependencies": {
+    "@metamask/eth-sig-util": "^4.0.0",
     "eslint": "7",
     "eslint-config-next": "12.0.4",
+    "node-fetch": "2.6.6",
     "web3": "^1.6.1",
-    "web3-eth-contract": "^1.6.1",
-    "@metamask/eth-sig-util": "^4.0.0",
-    "node-fetch": "2.6.6"
+    "web3-eth-contract": "^1.6.1"
   }
 }
